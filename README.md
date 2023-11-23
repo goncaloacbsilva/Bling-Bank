@@ -10,13 +10,13 @@
 
 | Number | Name              | User                             | E-mail                              |
 | -------|-------------------|----------------------------------| ------------------------------------|
-| 110948  | Renato Custódio     | <https://github.com/Renato-Custodio>   | <renato.miguel.monteirinho.custodio@tecnico.ulisboa.pt>   |
+| 110948  | Renato Custódio     | <https://github.com/Renato-Custodio>   | <mailto:renato.miguel.monteirinho.custodio@tecnico.ulisboa.pt>   |
 | 96925  | Gonçalo Silva      | <https://github.com/goncaloacbsilva>     | <mailto:goncalo.c.brito.da.silva@tecnico.ulisboa.pt>     |
 | 33333  | Charlie Security  | <https://github.com/CharlieUser> | <mailto:charlie@tecnico.ulisboa.pt> |
 
 *(fill table above with team member information)*  
 
-![Alice](img/alice.png) ![Gonçalo](img/96925.png) ![Bob](img/bob.png)
+![Renato](img/renato.jpg) ![Gonçalo](img/96925.png) ![Bob](img/bob.png)
 
 *(add face photos with 150px height; faces should have similar size and framing)*
 

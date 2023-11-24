@@ -8,11 +8,11 @@
 | -------|-------------------|----------------------------------| ------------------------------------|
 | 110948  | Renato Custódio     | <https://github.com/Renato-Custodio>   | <mailto:renato.miguel.monteirinho.custodio@tecnico.ulisboa.pt>   |
 | 96925  | Gonçalo Silva      | <https://github.com/goncaloacbsilva>     | <mailto:goncalo.c.brito.da.silva@tecnico.ulisboa.pt>     |
-| 33333  | Miguel Vale | <https://github.com/MiguelVale2121> | <mailto:miguel.vale@tecnico.ulisboa.pt> |
+| 99113  | Miguel Vale | <https://github.com/MiguelVale2121> | <mailto:miguel.vale@tecnico.ulisboa.pt> |
 
 *(fill table above with team member information)*  
 
-![Renato](img/renato.jpg) ![Gonçalo](img/96925.png) ![Miguel](img/bob.png)
+![Renato](img/renato.jpg) ![Gonçalo](img/96925.png) ![Miguel](img/IMG_99113.png)
 
 *(add face photos with 150px height; faces should have similar size and framing)*
 

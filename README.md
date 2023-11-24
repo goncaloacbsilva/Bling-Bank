@@ -12,7 +12,7 @@
 
 *(fill table above with team member information)*  
 
-![Renato](img/renato.jpg) ![Gonçalo](img/96925.png) ![Miguel](img/IMG_99113.png)
+![Renato](img/renato.jpg) ![Gonçalo](img/96925.png) ![Miguel](img/IMG_99113.jpg)
 
 *(add face photos with 150px height; faces should have similar size and framing)*
 

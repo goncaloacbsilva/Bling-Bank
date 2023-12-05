@@ -7,12 +7,10 @@ import { UnprotectDto } from './dtos/unprotect.dto';
 function generateSymmetricKey(): KeyObject {
   const salt = randomBytes(16); // Generate a random salt
   const key = scryptSync(
-    'ogoncaloegayMesmoGayMasUmaPaneleirriseDoCaralho',
+    '98n751t43v31t4754619387fd5jmdxk193780t54d6yj',
     salt,
     32,
   ); // Adjust the length based on your requirements
-
-  console.log('Key: ', key.toString('base64'));
 
   return createSecretKey(key);
 }

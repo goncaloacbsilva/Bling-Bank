@@ -1,3 +1,4 @@
+import { Console } from "console";
 import * as crypto from "crypto";
 
 interface CipherResult {
@@ -39,13 +40,11 @@ function decipherData(
 ): any {
   const nonce = Buffer.from(cipheredData.nonce, "base64");
   const decipher = crypto.createDecipheriv("aes-256-cbc", secret, nonce);
-  decipher.update(cipheredData.data, "base64");
 
-  const gay = decipher.final().toString();
+  const decrypted = Buffer.concat([decipher.update(Buffer.from(cipheredData.data, "base64")), decipher.final()]).toString();
+  
 
-  console.log("GAY:", gay);
-
-  return JSON.parse(gay);
+  return JSON.parse(decrypted);
 }
 
 // Exported functions

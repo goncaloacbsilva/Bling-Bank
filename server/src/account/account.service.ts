@@ -79,12 +79,35 @@ export class AccountService {
 
     return account.movements;
   }
+ 
+  async findExpenses(id: string) {
+    const account = await this.accountModel.findById(id).populate("movements");
+
+    if (!account) throw new NotFoundException("Account not found");
+
+    const expensesMovements = account.movements.filter(
+      (movement) => movement.value < 0
+    );
+
+    expensesMovements.sort((a, b) => {
+      if (a.description < b.description) {
+        return -1;
+      }
+      if (a.description > b.description) {
+          return 1;
+      }
+      return 0;
+    });
+
+    return expensesMovements;
+  }
 
   async remove(id: string) {
     return this.accountModel.deleteOne({
       _id: id,
     });
   }
+    
 
   /* async unprotect(key: string, unprotectDto: UnprotectDto) {
         return unprotect(unprotectDto, createSecretKey(Buffer.from(key, 'base64')));

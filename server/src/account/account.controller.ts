@@ -67,4 +67,9 @@ export class AccountController {
   async delete(@Param("id") id: string) {
     return this.accountService.remove(id);
   }
+
+  @Get(":id/expenses")
+  async findExpenses(@Param("id") id: string) {
+    return this.accountService.findExpenses(id);
+  }
 }

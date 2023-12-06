@@ -7,6 +7,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   ValidationPipe,
 } from "@nestjs/common";
 import { Account } from "./schemas/account.schema";
@@ -71,5 +72,13 @@ export class AccountController {
   @Get(":id/expenses")
   async findExpenses(@Param("id") id: string) {
     return this.accountService.findExpenses(id);
+  }
+
+  @Put(":id/payments")
+  async payment(
+    @Body(ValidationPipe) createAccountMovementDto: CreateAccountMovementDto,
+    @Param("id") id: string
+  ) {
+    return this.accountService.payment(id, createAccountMovementDto);
   }
 }

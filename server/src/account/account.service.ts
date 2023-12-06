@@ -107,6 +107,28 @@ export class AccountService {
       _id: id,
     });
   }
+
+  // Quero que o usuario veja o pagamento e atualize o balance e depois salve o movimento
+  async payment(
+    id: string,
+    createAccountMovementDto: CreateAccountMovementDto
+  ) {
+    const account = await this.accountModel.findById(id);
+
+    if (!account) throw new NotFoundException("Account not found");
+
+    let newBalance = 0;
+    if (createAccountMovementDto.value < 0) 
+      newBalance = account.balance + createAccountMovementDto.value;
+
+    if (newBalance < 0) throw new NotFoundException("Insufficient funds");
+
+    account.balance = newBalance;
+
+    account.save();
+
+    return this.createMovement(id, createAccountMovementDto);
+  }
     
 
   /* async unprotect(key: string, unprotectDto: UnprotectDto) {

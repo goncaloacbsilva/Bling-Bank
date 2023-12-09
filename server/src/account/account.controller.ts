@@ -74,7 +74,7 @@ export class AccountController {
     return this.accountService.findExpenses(id);
   }
 
-  @Put(":id/payments")
+  @Post(":id/payments")
   async payment(
     @Body(ValidationPipe) createAccountMovementDto: CreateAccountMovementDto,
     @Param("id") id: string

@@ -1,13 +1,16 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { protect, unprotect } from "@securelib";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { KeyObject, createSecretKey, randomBytes, scryptSync } from "crypto";
-import { UnprotectDto } from "./dtos/unprotect.dto";
-import { ProtectDto } from "./dtos/protect.dto";
 import { CreateAccountDto } from "./dtos/createAccount.dto";
 import { InjectModel } from "@nestjs/mongoose";
 import { Account, AccountMovement } from "./schemas/account.schema";
 import { Model } from "mongoose";
 import { CreateAccountMovementDto } from "./dtos/createMovement.dto";
+import { groupBy } from "lodash";
+import { DateTime } from "luxon";
 
 function generateSymmetricKey(): KeyObject {
   const salt = randomBytes(16); // Generate a random salt
@@ -51,6 +54,9 @@ export class AccountService {
         $push: {
           movements: movement,
         },
+        $inc: {
+          balance: createAccountMovementDto.value,
+        },
       },
       {
         new: true,
@@ -79,7 +85,7 @@ export class AccountService {
 
     return account.movements;
   }
- 
+
   async findExpenses(id: string) {
     const account = await this.accountModel.findById(id).populate("movements");
 
@@ -90,16 +96,15 @@ export class AccountService {
     );
 
     expensesMovements.sort((a, b) => {
-      if (a.description < b.description) {
-        return -1;
-      }
-      if (a.description > b.description) {
-          return 1;
-      }
-      return 0;
+      const d1 = DateTime.fromFormat(a.date, "dd/MM/yyyy");
+      const d2 = DateTime.fromFormat(b.date, "dd/MM/yyyy");
+
+      return d2.toMillis() - d1.toMillis();
     });
 
-    return expensesMovements;
+    const result = groupBy(expensesMovements, ({ description }) => description);
+
+    return result;
   }
 
   async remove(id: string) {
@@ -117,19 +122,23 @@ export class AccountService {
 
     if (!account) throw new NotFoundException("Account not found");
 
-    let newBalance = 0;
-    if (createAccountMovementDto.value < 0) 
-      newBalance = account.balance + createAccountMovementDto.value;
+    if (account.balance + createAccountMovementDto.value < 0)
+      throw new BadRequestException("Insufficient funds");
 
-    if (newBalance < 0) throw new NotFoundException("Insufficient funds");
-
-    account.balance = newBalance;
+    if (
+      DateTime.now().toMillis() -
+        DateTime.fromFormat(
+          createAccountMovementDto.date,
+          "dd/MM/yyyy"
+        ).toMillis() <
+      0
+    )
+      throw new BadRequestException("Invalid Date");
 
     account.save();
 
     return this.createMovement(id, createAccountMovementDto);
   }
-    
 
   /* async unprotect(key: string, unprotectDto: UnprotectDto) {
         return unprotect(unprotectDto, createSecretKey(Buffer.from(key, 'base64')));

@@ -1,4 +1,3 @@
-import { CreateAccountDto } from "./dtos/createAccount.dto";
 import { AccountService } from "./account.service";
 import {
   Body,
@@ -17,32 +16,19 @@ import { CreateAccountMovementDto } from "./dtos/createMovement.dto";
 export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 
-  /*     @Post('protect')
-    async protect(
-      @Body(ValidationPipe) protectDto: ProtectDto,
-    ): Promise<ProtectedData> {
-      
-    } */
+  // Account
 
-  /* @Post('unprotect/:key')
-    async unprotect(
-        @Body(ValidationPipe) unprotectDto: UnprotectDto,
-        @Param('key') key: string,
-    ): Promise<any> {
-        return this.appService.unprotect(key, unprotectDto);
-    } */
-
-  @Post()
-  async createAccount(
-    @Body(ValidationPipe) createAccountDto: CreateAccountDto
-  ) {
-    return this.accountService.create(createAccountDto);
+  @Get()
+  async findAll(): Promise<Account[]> {
+    return this.accountService.findAll();
   }
 
   @Get(":id")
-  async find(@Param("id") id: string): Promise<Account> {
-    return this.accountService.find(id);
+  async findOne(@Param("id") id: string): Promise<Account> {
+    return await this.accountService.findOne(id);
   }
+
+  // Movements
 
   @Get(":id/movements")
   async findAllMovements(
@@ -59,26 +45,10 @@ export class AccountController {
     return this.accountService.createMovement(id, createAccountMovementDto);
   }
 
-  @Get()
-  async findAll(): Promise<Account[]> {
-    return this.accountService.findAll();
-  }
-
-  @Delete(":id")
-  async delete(@Param("id") id: string) {
-    return this.accountService.remove(id);
-  }
+  // Expenses
 
   @Get(":id/expenses")
   async findExpenses(@Param("id") id: string) {
     return this.accountService.findExpenses(id);
-  }
-
-  @Post(":id/payments")
-  async payment(
-    @Body(ValidationPipe) createAccountMovementDto: CreateAccountMovementDto,
-    @Param("id") id: string
-  ) {
-    return this.accountService.payment(id, createAccountMovementDto);
   }
 }

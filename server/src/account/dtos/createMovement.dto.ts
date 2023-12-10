@@ -1,12 +1,12 @@
-import { IsString, IsNumber } from 'class-validator';
+import { IsString, IsNumber, IsDateString } from "class-validator";
 
 export class CreateAccountMovementDto {
-    @IsString()
-    date: string;
+  @IsDateString()
+  date: string;
 
-    @IsNumber()
-    value: number;
+  @IsNumber()
+  value: number;
 
-    @IsString()
-    description: string;
+  @IsString()
+  description: string;
 }

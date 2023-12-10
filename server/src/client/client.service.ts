@@ -61,7 +61,7 @@ export class ClientService {
   }
 
   async login(rawLoginDto: RawLoginDto) {
-    const loginData = unprotectAsymetric(rawLoginDto, this.privateKey);
+    const loginData = unprotectAsymmetric(rawLoginDto, this.privateKey);
 
     let loginDto = plainToInstance(LoginDto, loginData);
     const errors = validateSync(loginDto);

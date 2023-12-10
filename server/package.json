@@ -17,11 +17,14 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "db:start": "docker run -p 27017:27017 --name sirs-mongo -d mongo",
+    "db:stop": "docker stop sirs-mongo && docker rm sirs-mongo"
   },
   "dependencies": {
     "@nestjs/common": "^10.2.10",
     "@nestjs/core": "^10.2.10",
+    "@nestjs/mapped-types": "*",
     "@nestjs/mongoose": "^10.0.2",
     "@nestjs/platform-express": "^9.0.0",
     "@types/luxon": "^3.3.7",

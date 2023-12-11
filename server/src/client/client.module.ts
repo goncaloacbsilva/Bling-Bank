@@ -8,9 +8,11 @@ import {
   Session,
   SessionSchema,
 } from "./schemas/client.schema";
+import { ConfigModule } from "@nestjs/config";
 
 @Module({
   imports: [
+    ConfigModule,
     MongooseModule.forFeature([
       { name: Client.name, schema: ClientSchema },
       { name: Session.name, schema: SessionSchema },

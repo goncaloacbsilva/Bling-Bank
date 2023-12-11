@@ -1,17 +1,6 @@
-import { IsBase64, IsMongoId } from "class-validator";
+import { IsBase64 } from "class-validator";
 
-export class SecureDataResponse {
-  @IsBase64()
-  mic: string;
-
+export class SecureData {
   @IsBase64()
   data: string;
-}
-
-export class SecureDataRequest extends SecureDataResponse {
-  @IsMongoId()
-  sessionId: string;
-
-  @IsBase64()
-  nonce: string;
 }

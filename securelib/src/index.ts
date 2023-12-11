@@ -1,9 +1,10 @@
 import * as crypto from "crypto";
 
 interface CipherResult {
-  data: string;
+  data?: string;
   nonce: string;
 }
+
 export interface ProtectedData {
   mic: string;
   nonce: string;
@@ -27,7 +28,7 @@ function createMIC(cipheredData: CipherResult): string {
   return secureHash(JSON.stringify(cipheredData));
 }
 
-function micMatch(mic: string, cipheredData: CipherResult): boolean {
+export function micMatch(mic: string, cipheredData: CipherResult): boolean {
   return createMIC(cipheredData) === mic;
 }
 
@@ -147,20 +148,24 @@ export function protect(data: any, secret: crypto.KeyObject): ProtectedData {
   return {
     mic: createMIC(cipheredData),
     nonce: cipheredData.nonce,
-    data: cipheredData.data,
+    data: cipheredData.data!,
   };
 }
 
-export function protectAsymmetric(data: any, secret: crypto.KeyObject) {
-  const cipheredData = encryptAsymmetricData(data, secret);
+export function protectAsymmetric(data: any, publicKey: crypto.KeyObject) {
+  const cipheredData: CipherResult = {
+    data: encryptAsymmetricData(data, publicKey),
+    nonce: crypto.randomBytes(16).toString("base64"),
+  };
 
   if (!cipheredData) {
     throw new Error("Failed to cipher data.");
   }
 
   return {
-    mic: secureHash(JSON.stringify(cipheredData)),
-    data: cipheredData,
+    mic: createMIC(cipheredData),
+    nonce: cipheredData.nonce,
+    data: cipheredData.data!,
   };
 }
 

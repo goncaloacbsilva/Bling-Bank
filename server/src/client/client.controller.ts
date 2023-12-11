@@ -1,5 +1,13 @@
-import { Controller, Get, Param } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  ValidationPipe,
+} from "@nestjs/common";
 import { ClientService } from "./client.service";
+import { RawLoginDto } from "./dtos/login.dto";
 
 @Controller("clients")
 export class ClientController {
@@ -13,5 +21,10 @@ export class ClientController {
   @Get(":id")
   findOne(@Param("id") id: string) {
     return this.clientService.findOne(id);
+  }
+
+  @Post("login")
+  async login(@Body(ValidationPipe) rawLoginDto: RawLoginDto) {
+    return await this.clientService.login(rawLoginDto);
   }
 }

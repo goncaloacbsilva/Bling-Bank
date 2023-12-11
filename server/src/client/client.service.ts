@@ -15,10 +15,12 @@ import {
   decryptAsymmetricData,
   generateAsymmetricKeys,
   generateSymmetricKey,
+  secureHash,
   unprotectAsymmetric,
 } from "@securelib";
 import { plainToInstance } from "class-transformer";
 import { validateSync } from "class-validator";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class ClientService {
@@ -27,25 +29,29 @@ export class ClientService {
 
   constructor(
     @InjectModel(Client.name) private readonly clientModel: Model<Client>,
-    @InjectModel(Session.name) private readonly sessionModel: Model<Session>
+    @InjectModel(Session.name) private readonly sessionModel: Model<Session>,
+    private configService: ConfigService
   ) {
     this.logger.log("Generating server keypair...");
-    if (!process.env.KEYS_PATH)
-      throw new Error("FATAL: Missing keys path at .env (KEYS_PATH)");
+
+    const keysPath = this.configService.getOrThrow<string>("KEYS_PATH");
 
     const { publicKey, privateKey } = generateAsymmetricKeys();
+
+    this.privateKey = privateKey;
+
     this.logger.log("Exporting keys...");
 
     writeFileSync(
-      `${process.env.KEYS_PATH}/server_public.pem`,
+      `${keysPath}/server_public.pem`,
       publicKey.export({ type: "spki", format: "pem" })
     );
     writeFileSync(
-      `${process.env.KEYS_PATH}/server_private.pem`,
+      `${keysPath}/server_private.pem`,
       privateKey.export({ type: "pkcs8", format: "pem" })
     );
 
-    this.logger.log("Keys exported to:", process.env.KEYS_PATH);
+    this.logger.log(`Keys exported to: ${keysPath}`);
   }
 
   findAll() {
@@ -61,13 +67,20 @@ export class ClientService {
   }
 
   async login(rawLoginDto: RawLoginDto) {
-    const loginData = unprotectAsymmetric(rawLoginDto, this.privateKey);
+    let loginData = undefined;
+    try {
+      loginData = unprotectAsymmetric(rawLoginDto, this.privateKey);
+    } catch (err: any) {
+      throw new BadRequestException("Data protection fault");
+    }
 
     let loginDto = plainToInstance(LoginDto, loginData);
     const errors = validateSync(loginDto);
 
     if (errors.length > 0) {
-      throw new BadRequestException(errors);
+      throw new BadRequestException(
+        errors.map((error) => Object.values(error.constraints).join(", "))
+      );
     }
 
     // Check credentials
@@ -76,7 +89,7 @@ export class ClientService {
 
     if (!client) throw new NotFoundException("Client not found");
 
-    if (client.password !== loginDto.password)
+    if (client.password !== secureHash(loginDto.password))
       throw new UnauthorizedException("Invalid credentials");
 
     // Initialize session
@@ -91,6 +104,7 @@ export class ClientService {
     await session.save();
 
     return {
+      sessionId: session.id,
       sessionKey: sessionKey.export().toString("base64"),
     };
   }

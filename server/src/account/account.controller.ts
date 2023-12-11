@@ -7,16 +7,18 @@ import {
   Param,
   Post,
   Put,
+  UseInterceptors,
   ValidationPipe,
 } from "@nestjs/common";
 import { Account } from "./schemas/account.schema";
 import { CreateAccountMovementDto } from "./dtos/createMovement.dto";
+import { SecureDataInterceptor } from "src/interceptors/securedata.interceptor";
 
 @Controller("accounts")
 export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 
-  // Account
+  // Accounts
 
   @Get()
   async findAll(): Promise<Account[]> {
@@ -31,6 +33,7 @@ export class AccountController {
   // Movements
 
   @Get(":id/movements")
+  @UseInterceptors(SecureDataInterceptor)
   async findAllMovements(
     @Param("id") id: string
   ): Promise<Account["movements"]> {

@@ -105,9 +105,7 @@ export class PaymentService {
     const payment = await this.paymentModel
       .findById(authorizePaymentDto.paymentId)
       .exec();
-    const client = await this.clientModel
-      .findById(authorizePaymentDto.clientId)
-      .exec();
+    const client = await this.clientModel.findById("").exec();
 
     if (!payment) throw new NotFoundException("Payment not found");
     if (!payment.account.holders.includes(client))

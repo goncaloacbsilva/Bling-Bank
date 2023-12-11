@@ -7,7 +7,14 @@ import {
   AccountMovement,
   AccountMovementSchema,
 } from "./schemas/movement.schema";
-import { Client, ClientSchema } from "../client/schemas/client.schema";
+import {
+  Client,
+  ClientSchema,
+  Session,
+  SessionSchema,
+} from "../client/schemas/client.schema";
+import { APP_INTERCEPTOR } from "@nestjs/core";
+import { SecureDataInterceptor } from "src/interceptors/securedata.interceptor";
 
 @Module({
   imports: [
@@ -15,6 +22,7 @@ import { Client, ClientSchema } from "../client/schemas/client.schema";
       { name: Account.name, schema: AccountSchema },
       { name: AccountMovement.name, schema: AccountMovementSchema },
       { name: Client.name, schema: ClientSchema },
+      { name: Session.name, schema: SessionSchema },
     ]),
   ],
   controllers: [AccountController],

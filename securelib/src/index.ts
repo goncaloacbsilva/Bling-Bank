@@ -11,6 +11,11 @@ export interface ProtectedData {
   data: string;
 }
 
+export interface ResponseProtectedData {
+  mic: string;
+  data: string;
+}
+
 export interface AsymmetricKeys {
   privateKey: crypto.KeyObject;
   publicKey: crypto.KeyObject;
@@ -24,12 +29,8 @@ export function secureHash(data: any): string {
   return hash.digest("base64");
 }
 
-function createMIC(cipheredData: any): string {
-  return secureHash(JSON.stringify(cipheredData));
-}
-
 export function micMatch(mic: string, cipheredData: any): boolean {
-  return createMIC(cipheredData) === mic;
+  return secureHash(cipheredData) === mic;
 }
 
 function cipherData(data: any, secret: crypto.KeyObject): CipherResult {
@@ -74,7 +75,7 @@ export function encryptAsymmetricData(
 }
 
 export function decryptAsymmetricData(
-  cipheredData: ProtectedData,
+  cipheredData: ProtectedData | ResponseProtectedData,
   privateKey: crypto.KeyObject
 ): any {
   const decryptedBuffer = crypto.privateDecrypt(
@@ -146,13 +147,19 @@ export function protect(data: any, secret: crypto.KeyObject): ProtectedData {
   }
 
   return {
-    mic: createMIC(cipheredData),
+    mic: secureHash({
+      nonce: cipheredData.nonce,
+      data: data,
+    }),
     nonce: cipheredData.nonce,
     data: cipheredData.data!,
   };
 }
 
-export function protectAsymmetric(data: any, publicKey: crypto.KeyObject) {
+export function protectAsymmetricClient(
+  data: any,
+  publicKey: crypto.KeyObject
+) {
   const cipheredData: CipherResult = {
     data: encryptAsymmetricData(data, publicKey),
     nonce: crypto.randomBytes(16).toString("base64"),
@@ -163,9 +170,28 @@ export function protectAsymmetric(data: any, publicKey: crypto.KeyObject) {
   }
 
   return {
-    mic: createMIC(cipheredData),
+    mic: secureHash({
+      nonce: cipheredData.nonce,
+      data: data,
+    }),
     nonce: cipheredData.nonce,
     data: cipheredData.data!,
+  };
+}
+
+export function protectAsymmetricServer(
+  data: any,
+  publicKey: crypto.KeyObject
+) {
+  const cipheredData = encryptAsymmetricData(data, publicKey);
+
+  if (!cipheredData) {
+    throw new Error("Failed to cipher data.");
+  }
+
+  return {
+    mic: secureHash(data),
+    data: cipheredData,
   };
 }
 
@@ -180,20 +206,24 @@ export function unprotect(
   protectedData: ProtectedData,
   key: crypto.KeyObject
 ): any {
-  if (!check(protectedData)) {
+  let decipheredData = decipherData(protectedData, key);
+
+  if (!check(decipheredData)) {
     throw new Error("Failed to decipher: compromised data!");
   }
 
-  return decipherData(protectedData, key);
+  return decipheredData;
 }
 
 export function unprotectAsymmetric(
-  protectedData: ProtectedData,
+  protectedData: ResponseProtectedData,
   key: crypto.KeyObject
 ): any {
-  if (!check(protectedData)) {
+  let decryptedData = decryptAsymmetricData(protectedData, key);
+
+  if (!micMatch(protectedData.mic, decryptedData)) {
     throw new Error("Failed to decipher: compromised data!");
   }
 
-  return decryptAsymmetricData(protectedData, key);
+  return decryptedData;
 }

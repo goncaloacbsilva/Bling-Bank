@@ -1,12 +1,15 @@
 import { createPublicKey } from "crypto";
-import { protectAsymmetric } from "./index";
+import { generateAsymmetricKeys, protectAsymmetric, unprotectAsymmetric } from "./index";
 import { readFileSync } from "fs";
 import * as readline from "readline";
+
+
+const { publicKey, privateKey } = generateAsymmetricKeys()
 
 function encodeLoginData(data: any) {
   const serverPublicKey = createPublicKey({
     key: readFileSync(
-      "/home/goncalo/Documents/IST/SIRS/t49-goncalo-miguel-renato/keys/server_public.pem"
+      "C:\Users\User\Desktop\t49-goncalo-miguel-renato\keys\server_public.pem"
     ),
     format: "pem",
     type: "spki",
@@ -15,6 +18,13 @@ function encodeLoginData(data: any) {
   const encryptedLoginData = protectAsymmetric(data, serverPublicKey);
 
   return encryptedLoginData;
+}
+
+function decodeLoginData(data: any) {
+  
+  const decryptLoginData = unprotectAsymmetric(data, privateKey);
+
+  return decryptLoginData;
 }
 
 const rl = readline.createInterface({
@@ -36,6 +46,7 @@ rl.question("Enter Client ID: ", (id) => {
       encodeLoginData({
         clientId: clientId,
         password: password,
+        publicKey: publicKey.export().toString("base64")
       })
     );
   });

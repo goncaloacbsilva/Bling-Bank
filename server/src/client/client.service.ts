@@ -9,7 +9,7 @@ import { Client, Session } from "./schemas/client.schema";
 import { Model } from "mongoose";
 import { InjectModel } from "@nestjs/mongoose";
 import { LoginDto, RawLoginDto } from "./dtos/login.dto";
-import { KeyObject, createPrivateKey } from "crypto";
+import { KeyObject, createPrivateKey, createPublicKey } from "crypto";
 import { writeFileSync } from "fs";
 import {
   decryptAsymmetricData,
@@ -17,6 +17,7 @@ import {
   generateSymmetricKey,
   secureHash,
   unprotectAsymmetric,
+  protectAsymmetric,
 } from "@securelib";
 import { plainToInstance } from "class-transformer";
 import { validateSync } from "class-validator";
@@ -103,9 +104,17 @@ export class ClientService {
 
     await session.save();
 
-    return {
+    const responseData = {
       sessionId: session.id,
       sessionKey: sessionKey.export().toString("base64"),
     };
+
+    const protectedData = protectAsymmetric(responseData, createPublicKey({
+      key: Buffer.from(loginDto.publicKey, "base64"),
+      format: "pem",
+      type: "spki",
+    }))
+    
+    return protectedData;
   }
 }

@@ -17,4 +17,7 @@ export class LoginDto {
 
   @IsString()
   password: string;
+
+  @IsBase64()
+  publicKey: string;
 }

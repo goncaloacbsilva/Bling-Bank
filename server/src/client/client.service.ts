@@ -16,8 +16,9 @@ import {
   generateAsymmetricKeys,
   generateSymmetricKey,
   secureHash,
-  unprotectAsymmetric,
-  protectAsymmetric,
+  micMatch,
+  ProtectedData,
+  protectAsymmetricServer,
 } from "@securelib";
 import { plainToInstance } from "class-transformer";
 import { validateSync } from "class-validator";
@@ -67,13 +68,23 @@ export class ClientService {
     return client;
   }
 
-  async login(rawLoginDto: RawLoginDto) {
+  async login(encodedLoginDto: ProtectedData & { publicKey: string }) {
     let loginData = undefined;
+
     try {
-      loginData = unprotectAsymmetric(rawLoginDto, this.privateKey);
+      loginData = decryptAsymmetricData(encodedLoginDto, this.privateKey);
     } catch (err: any) {
-      throw new BadRequestException("Data protection fault");
+      throw new BadRequestException("Data decryption fault");
     }
+
+    const micPayload = {
+      nonce: encodedLoginDto.nonce,
+      data: loginData,
+      publicKey: encodedLoginDto.publicKey,
+    };
+
+    if (!micMatch(encodedLoginDto.mic, micPayload))
+      throw new BadRequestException("Data integrity fault");
 
     let loginDto = plainToInstance(LoginDto, loginData);
     const errors = validateSync(loginDto);
@@ -109,12 +120,18 @@ export class ClientService {
       sessionKey: sessionKey.export().toString("base64"),
     };
 
-    const protectedData = protectAsymmetric(responseData, createPublicKey({
-      key: Buffer.from(loginDto.publicKey, "base64"),
-      format: "pem",
-      type: "spki",
-    }))
-    
-    return protectedData;
+    const protectedData = protectAsymmetricServer(
+      responseData,
+      createPublicKey({
+        key: Buffer.from(encodedLoginDto.publicKey, "base64"),
+        format: "pem",
+        type: "spki",
+      })
+    );
+
+    return {
+      mic: protectedData.mic,
+      data: protectedData.data,
+    };
   }
 }

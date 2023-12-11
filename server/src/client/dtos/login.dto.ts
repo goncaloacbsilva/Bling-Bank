@@ -2,13 +2,10 @@ import { IsBase64, IsMongoId, IsString } from "class-validator";
 
 export class RawLoginDto {
   @IsBase64()
-  mic: string;
-
-  @IsBase64()
-  nonce: string;
-
-  @IsBase64()
   data: string;
+
+  @IsBase64()
+  publicKey: string;
 }
 
 export class LoginDto {
@@ -17,7 +14,4 @@ export class LoginDto {
 
   @IsString()
   password: string;
-
-  @IsBase64()
-  publicKey: string;
 }

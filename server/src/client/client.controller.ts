@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Post,
   ValidationPipe,
@@ -24,7 +25,15 @@ export class ClientController {
   }
 
   @Post("login")
-  async login(@Body(ValidationPipe) rawLoginDto: RawLoginDto) {
-    return await this.clientService.login(rawLoginDto);
+  async login(
+    @Headers("mic") mic: string,
+    @Headers("nonce") nonce: string,
+    @Body(ValidationPipe) rawLoginDto: RawLoginDto
+  ) {
+    return await this.clientService.login({
+      mic: mic,
+      nonce: nonce,
+      ...rawLoginDto,
+    });
   }
 }

@@ -24,11 +24,11 @@ export function secureHash(data: any): string {
   return hash.digest("base64");
 }
 
-function createMIC(cipheredData: CipherResult): string {
+function createMIC(cipheredData: any): string {
   return secureHash(JSON.stringify(cipheredData));
 }
 
-export function micMatch(mic: string, cipheredData: CipherResult): boolean {
+export function micMatch(mic: string, cipheredData: any): boolean {
   return createMIC(cipheredData) === mic;
 }
 

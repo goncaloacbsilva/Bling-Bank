@@ -1,15 +1,19 @@
 import { createPublicKey } from "crypto";
-import { generateAsymmetricKeys, protectAsymmetric, unprotectAsymmetric } from "./index";
+import {
+  generateAsymmetricKeys,
+  protectAsymmetric,
+  secureHash,
+  unprotectAsymmetric,
+} from "./index";
 import { readFileSync } from "fs";
-import * as readline from "readline";
+import prompts from "prompts";
 
-
-const { publicKey, privateKey } = generateAsymmetricKeys()
+const { publicKey, privateKey } = generateAsymmetricKeys();
 
 function encodeLoginData(data: any) {
   const serverPublicKey = createPublicKey({
     key: readFileSync(
-      "C:\Users\User\Desktop\t49-goncalo-miguel-renato\keys\server_public.pem"
+      "/home/goncalo/Documents/IST/SIRS/t49-goncalo-miguel-renato/keys/server_public.pem"
     ),
     format: "pem",
     type: "spki",
@@ -21,33 +25,79 @@ function encodeLoginData(data: any) {
 }
 
 function decodeLoginData(data: any) {
-  
   const decryptLoginData = unprotectAsymmetric(data, privateKey);
 
   return decryptLoginData;
 }
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
+enum CLIOption {
+  EncodeLogin,
+  DecodeLogin,
+}
 
-let clientId: string;
-let password: string;
-
-rl.question("Enter Client ID: ", (id) => {
-  clientId = id;
-
-  rl.question("Enter Password: ", (pass) => {
-    rl.close();
-
-    password = pass;
-    console.log(
-      encodeLoginData({
-        clientId: clientId,
-        password: password,
-        publicKey: publicKey.export().toString("base64")
-      })
-    );
+async function main() {
+  const choice = await prompts({
+    type: "select",
+    name: "value",
+    message: "Choose a task",
+    choices: [
+      { title: "Create login payload", value: CLIOption.EncodeLogin },
+      { title: "Decrypt login payload", value: CLIOption.DecodeLogin },
+    ],
   });
-});
+
+  switch (choice.value as CLIOption) {
+    case CLIOption.EncodeLogin:
+      const userInput = await prompts([
+        {
+          type: "text",
+          name: "clientId",
+          message: "Client ID:",
+        },
+        {
+          type: "text",
+          name: "password",
+          message: "Client password:",
+        },
+      ]);
+
+      let loginPayload = {
+        ...encodeLoginData({
+          clientId: userInput.clientId,
+          password: userInput.password,
+        }),
+        publicKey: Buffer.from(
+          publicKey.export({ type: "spki", format: "pem" })
+        ).toString("base64"),
+      };
+
+      // Recompute MIC to account public key
+      loginPayload = {
+        ...loginPayload,
+        mic: secureHash({
+          nonce: loginPayload.nonce,
+          data: loginPayload.data,
+          publicKey: loginPayload.publicKey,
+        }),
+      };
+
+      console.log("Payload:");
+      console.log(loginPayload);
+      break;
+
+    case CLIOption.DecodeLogin:
+      const input = await prompts([
+        {
+          type: "text",
+          name: "payload",
+          message: "Payload:",
+        },
+      ]);
+
+      console.log("Decoded data:");
+      console.log(decodeLoginData(input.payload));
+      break;
+  }
+}
+
+main();

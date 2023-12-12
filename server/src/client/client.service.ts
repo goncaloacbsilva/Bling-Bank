@@ -23,6 +23,7 @@ import {
 import { plainToInstance } from "class-transformer";
 import { validateSync } from "class-validator";
 import { ConfigService } from "@nestjs/config";
+import { Account } from "src/account/schemas/account.schema";
 
 @Injectable()
 export class ClientService {
@@ -60,12 +61,12 @@ export class ClientService {
     return this.clientModel.find().exec();
   }
 
-  async findOne(id: string): Promise<Client> {
-    const client = await this.clientModel.findById(id).exec();
+  async findAccounts(clientId: string): Promise<Account[]> {
+    const client = await this.clientModel.findById(clientId).exec();
 
-    if (!client) throw new NotFoundException("Account not found");
+    if (!client) throw new NotFoundException("Client not found");
 
-    return client;
+    return client.accounts;
   }
 
   async login(encodedLoginDto: ProtectedData & { publicKey: string }) {
@@ -109,7 +110,7 @@ export class ClientService {
     const sessionKey = generateSymmetricKey();
 
     const session = new this.sessionModel({
-      sessionKey: sessionKey,
+      sessionKey: sessionKey.export().toString("base64"),
       client: client,
     });
 

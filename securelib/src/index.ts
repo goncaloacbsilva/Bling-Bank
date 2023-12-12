@@ -33,7 +33,7 @@ export function micMatch(mic: string, cipheredData: any): boolean {
   return secureHash(cipheredData) === mic;
 }
 
-function cipherData(data: any, secret: crypto.KeyObject): CipherResult {
+export function cipherData(data: any, secret: crypto.KeyObject): CipherResult {
   const nonce = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv("aes-256-cbc", secret, nonce);
   const encrypted = cipher.update(JSON.stringify(data));
@@ -197,8 +197,8 @@ export function protectAsymmetricServer(
 
 export function check(data: ProtectedData): boolean {
   return micMatch(data.mic, {
-    data: data.data,
     nonce: data.nonce,
+    data: data.data,
   });
 }
 
@@ -208,7 +208,12 @@ export function unprotect(
 ): any {
   let decipheredData = decipherData(protectedData, key);
 
-  if (!check(decipheredData)) {
+  if (
+    !check({
+      ...protectedData,
+      data: decipheredData,
+    })
+  ) {
     throw new Error("Failed to decipher: compromised data!");
   }
 

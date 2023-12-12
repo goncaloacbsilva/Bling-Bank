@@ -18,7 +18,7 @@ export class Client {
 @Schema()
 export class Session {
   @Prop()
-  sessionKey: KeyObject;
+  sessionKey: string;
 
   @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: Client.name }])
   client: Client;

@@ -13,6 +13,7 @@ import {
 import { Account } from "./schemas/account.schema";
 import { CreateAccountMovementDto } from "./dtos/createMovement.dto";
 import { SecureDataInterceptor } from "src/interceptors/securedata.interceptor";
+import { Client } from "src/decorators/client.decorator";
 
 @Controller("accounts")
 export class AccountController {
@@ -25,9 +26,13 @@ export class AccountController {
     return this.accountService.findAll();
   }
 
-  @Get(":id")
-  async findOne(@Param("id") id: string): Promise<Account> {
-    return await this.accountService.findOne(id);
+  @Get(":accountId")
+  @UseInterceptors(SecureDataInterceptor)
+  async findAccount(
+    @Client() clientId: string,
+    @Param("accountId") accountId: string
+  ): Promise<Account> {
+    return await this.accountService.findAccount(clientId, accountId);
   }
 
   // Movements

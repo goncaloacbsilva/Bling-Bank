@@ -8,13 +8,22 @@ import {
 } from "@nestjs/common";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
-import { ProtectedData, micMatch, protect, unprotect } from "@securelib";
+import {
+  ProtectedData,
+  check,
+  cipherData,
+  micMatch,
+  protect,
+  secureHash,
+  unprotect,
+} from "@securelib";
 import { isMongoId, validateSync } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { SecureData } from "./secure.dto";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Session } from "src/client/schemas/client.schema";
+import { createSecretKey } from "crypto";
 
 @Injectable()
 export class SecureDataInterceptor implements NestInterceptor {
@@ -39,13 +48,17 @@ export class SecureDataInterceptor implements NestInterceptor {
       .findById(req.headers["session-id"])
       .exec();
 
+    const sessionKey = createSecretKey(
+      Buffer.from(session.sessionKey, "base64")
+    );
+
     if (!session) {
       throw new NotFoundException("Invalid session");
     }
 
-    console.log("Session:", session);
+    req.sessionClientId = session.client[0].toString();
 
-    if (req.body) {
+    if (Object.keys(req.body).length > 0) {
       let reqDto = plainToInstance(SecureData, req.body);
       const errors = validateSync(reqDto);
 
@@ -54,26 +67,30 @@ export class SecureDataInterceptor implements NestInterceptor {
       }
 
       const protectedPacket: ProtectedData = {
-        mic: req.headers.get("mic"),
-        nonce: req.headers.get("nonce"),
+        mic: req.headers["mic"],
+        nonce: req.headers["nonce"],
         data: reqDto.data,
       };
 
-      console.log("Protected packet:", protectedPacket);
-
       // Decrypt request
-      req.body = unprotect(protectedPacket, session.sessionKey);
+      req.body = unprotect(protectedPacket, sessionKey);
     } else {
-      if (
-        !micMatch(req.headers.get("mic"), {
-          nonce: req.headers.get("nonce"),
-        })
-      )
+      const micDebug = {
+        mic: req.headers["mic"],
+        nonce: req.headers["nonce"],
+        data: "",
+      };
+
+      if (!check(micDebug))
         throw new BadRequestException("Integrity protection fault");
     }
 
-    return handler
-      .handle()
-      .pipe(map((data) => protect(data, session.sessionKey)));
+    return handler.handle().pipe(
+      map((data) => {
+        const encodedPacket = protect(data, sessionKey);
+
+        return encodedPacket;
+      })
+    );
   }
 }

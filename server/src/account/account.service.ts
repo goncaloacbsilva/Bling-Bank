@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -76,10 +77,17 @@ export class AccountService implements OnModuleInit {
     return await this.accountModel.find().exec();
   }
 
-  async findOne(id: string): Promise<Account> {
-    const account = await this.accountModel.findById(id).exec();
+  async findAccount(clientId: string, accountId: string): Promise<Account> {
+    const account = await this.accountModel.findById(accountId).exec();
 
     if (!account) throw new NotFoundException("Account not found");
+
+    const clientIds = account.holders.map((holder) => holder.toString());
+
+    if (!clientIds.includes(clientId))
+      throw new ForbiddenException(
+        "The account cannot be accessed by the current client"
+      );
 
     return account;
   }

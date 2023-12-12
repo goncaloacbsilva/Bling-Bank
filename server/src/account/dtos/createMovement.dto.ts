@@ -5,7 +5,7 @@ export class CreateAccountMovementDto {
   date: string;
 
   @IsNumber()
-  value: number;
+  amount: number;
 
   @IsString()
   description: string;

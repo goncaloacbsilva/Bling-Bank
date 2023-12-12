@@ -7,10 +7,10 @@ import { DateTime } from "luxon";
 @Schema()
 export class AccountMovement {
   @Prop()
-  date: DateTime;
+  date: string;
 
   @Prop()
-  ammount: number;
+  amount: number;
 
   @Prop()
   description: string;

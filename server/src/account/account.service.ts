@@ -9,7 +9,7 @@ import {
 import { KeyObject, createSecretKey, randomBytes, scryptSync } from "crypto";
 import { InjectModel } from "@nestjs/mongoose";
 import { Account } from "./schemas/account.schema";
-import { Model, Types } from "mongoose";
+import { Model, Types, Document } from "mongoose";
 import { CreateAccountMovementDto } from "./dtos/createMovement.dto";
 import { groupBy } from "lodash";
 import { DateTime } from "luxon";
@@ -25,7 +25,7 @@ export class AccountService implements OnModuleInit {
     @InjectModel(Client.name) private readonly clientModel: Model<Client>,
     @InjectModel(Account.name) private readonly accountModel: Model<Account>,
     @InjectModel(AccountMovement.name)
-    private readonly accountMovementModel: Model<Account>
+    private readonly accountMovementModel: Model<AccountMovement>
   ) {}
 
   async onModuleInit() {
@@ -37,6 +37,7 @@ export class AccountService implements OnModuleInit {
     this.logger.warn(`[DB Populate]: Deleting previous data`);
     await this.accountModel.deleteMany().exec();
     await this.clientModel.deleteMany().exec();
+    await this.accountMovementModel.deleteMany().exec();
 
     let index = 0;
     let clients = seedClients.map((clientDto) => {
@@ -47,6 +48,11 @@ export class AccountService implements OnModuleInit {
       index++;
       return client;
     });
+
+    let movements: (Document<unknown, {}, AccountMovement> &
+      AccountMovement & {
+        _id: Types.ObjectId;
+      })[] = [];
 
     let accounts = seedAccounts.map((accountsDto) => {
       const account = new this.accountModel({
@@ -61,12 +67,23 @@ export class AccountService implements OnModuleInit {
         account.holders.push(client);
       });
 
+      accountsDto.movements.forEach((movement) => {
+        const movementDto = new CreateAccountMovementDto();
+
+        movementDto.date = movement.date;
+        movementDto.amount = movement.amount;
+        movementDto.description = movement.description;
+
+        movements.push(this.createMovement(account, movementDto));
+      });
+
       return account;
     });
 
     await Promise.all([
       clients.map((m) => m.save()),
       accounts.map((m) => m.save()),
+      movements.map((m) => m.save()),
     ]);
     this.logger.log(`[DB Populate]: Saved documents`);
   }
@@ -77,7 +94,7 @@ export class AccountService implements OnModuleInit {
     return await this.accountModel.find().exec();
   }
 
-  async findAccount(clientId: string, accountId: string): Promise<Account> {
+  async findAccount(clientId: string, accountId: string) {
     const account = await this.accountModel.findById(accountId).exec();
 
     if (!account) throw new NotFoundException("Account not found");
@@ -94,52 +111,49 @@ export class AccountService implements OnModuleInit {
 
   // Movements feature
 
-  async findAllMovements(id: string): Promise<Account["movements"]> {
-    const account = await this.accountModel.findById(id).populate("movements");
+  async findAllMovements(
+    clientId: string,
+    accountId: string
+  ): Promise<Account["movements"]> {
+    const account = await this.findAccount(clientId, accountId);
 
-    if (!account) throw new NotFoundException("Account not found");
+    const accountWithMovements = await account.populate("movements");
 
-    return account.movements;
+    return accountWithMovements.movements;
   }
 
-  async createMovement(
-    id: string,
+  createMovement(
+    account: Document<unknown, {}, Account> &
+      Account & {
+        _id: Types.ObjectId;
+      },
     createAccountMovementDto: CreateAccountMovementDto
   ) {
     const movement = new this.accountMovementModel(createAccountMovementDto);
-    movement.save();
 
-    const update = await this.accountModel.findByIdAndUpdate(
-      id,
-      {
-        $push: {
-          movements: movement,
-        },
-        $inc: {
-          balance: createAccountMovementDto.value,
-        },
-      },
-      {
-        new: true,
-      }
-    );
+    account.movements.push(movement);
+    account.balance += createAccountMovementDto.amount;
 
-    return update.movements;
+    return movement;
   }
 
   // Expenses feature
 
-  async findExpenses(id: string) {
-    const account = await this.accountModel.findById(id).populate("movements");
+  async findExpenses(
+    clientId: string,
+    accountId: string
+  ): Promise<AccountMovement[]> {
+    const movements = await this.findAllMovements(clientId, accountId);
 
-    if (!account) throw new NotFoundException("Account not found");
-
-    const expensesMovements = account.movements.filter(
-      (movement) => movement.ammount < 0
+    const expensesMovements = movements.filter(
+      (movement) => movement.amount < 0
     );
 
     expensesMovements.sort((a, b) => {
-      return a.date.toMillis() - b.date.toMillis();
+      return (
+        DateTime.fromISO(a.date).toMillis() -
+        DateTime.fromISO(b.date).toMillis()
+      );
     });
 
     const result = groupBy(expensesMovements, ({ description }) => description);

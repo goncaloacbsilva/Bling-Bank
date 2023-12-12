@@ -37,26 +37,23 @@ export class AccountController {
 
   // Movements
 
-  @Get(":id/movements")
+  @Get(":accountId/movements")
   @UseInterceptors(SecureDataInterceptor)
   async findAllMovements(
-    @Param("id") id: string
+    @Client() clientId: string,
+    @Param("accountId") accountId: string
   ): Promise<Account["movements"]> {
-    return this.accountService.findAllMovements(id);
-  }
-
-  @Post(":id/movements")
-  async createMovement(
-    @Body(ValidationPipe) createAccountMovementDto: CreateAccountMovementDto,
-    @Param("id") id: string
-  ) {
-    return this.accountService.createMovement(id, createAccountMovementDto);
+    return this.accountService.findAllMovements(clientId, accountId);
   }
 
   // Expenses
 
-  @Get(":id/expenses")
-  async findExpenses(@Param("id") id: string) {
-    return this.accountService.findExpenses(id);
+  @Get(":accountId/expenses")
+  @UseInterceptors(SecureDataInterceptor)
+  async findExpenses(
+    @Client() clientId: string,
+    @Param("accountId") accountId: string
+  ) {
+    return this.accountService.findExpenses(clientId, accountId);
   }
 }

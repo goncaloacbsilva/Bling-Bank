@@ -1,4 +1,5 @@
 import { secureHash } from "@securelib";
+import { DateTime } from "luxon";
 import { Types } from "mongoose";
 
 interface ClientDto {
@@ -6,9 +7,16 @@ interface ClientDto {
   password: string;
 }
 
+export interface MovementDto {
+  date: string;
+  amount: number;
+  description: string;
+}
+
 export interface AccountDto {
   accountHolders: string[];
   currency: "EUR" | "USD" | "AED" | "CHF" | "BRL" | "GBP";
+  movements: MovementDto[];
 }
 
 export const seedClients: ClientDto[] = [
@@ -38,17 +46,43 @@ export const seedAccounts: AccountDto[] = [
   {
     accountHolders: ["Alice"],
     currency: "EUR",
+    movements: [
+      {
+        date: "10/12/2023",
+        amount: 150,
+        description: "Casino",
+      },
+    ],
   },
   {
     accountHolders: ["Bob"],
     currency: "USD",
+    movements: [
+      {
+        date: "12/12/2023",
+        amount: -75,
+        description: "Water bill",
+      },
+      {
+        date: "12/12/2023",
+        amount: -1005,
+        description: "Water bill",
+      },
+      {
+        date: "26/11/2023",
+        amount: 1500,
+        description: "Salary",
+      },
+    ],
   },
   {
     accountHolders: ["Eve"],
     currency: "EUR",
+    movements: [],
   },
   {
     accountHolders: ["Bob", "Eve", "Carol", "Walter"],
     currency: "CHF",
+    movements: [],
   },
 ];

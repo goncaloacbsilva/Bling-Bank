@@ -11,14 +11,14 @@ import {
 import { readFileSync } from "fs";
 import prompts, { Choice } from "prompts";
 import axios, { AxiosError, AxiosInstance } from "axios";
-import * as crypto from "crypto";
+import { DisplayData, DisplayExpenses, DisplayMovements } from "./display";
 
 // Auxiliary functions
 
 function encodeLoginData(data: any) {
   const serverPublicKey = createPublicKey({
     key: readFileSync(
-      "/home/goncalo/Documents/IST/SIRS/t49-goncalo-miguel-renato/keys/server_public.pem"
+      "/Users/goncalo/Desktop/IST - MEIC/1st year/2nd Quarter/SIRS/t49-goncalo-miguel-renato/keys/server_public.pem"
     ),
     format: "pem",
     type: "spki",
@@ -158,33 +158,36 @@ class BlingBankClient {
     }
   }
 
-  public async getMovements(): Promise<string[]> {
+  public async getMovements() {
     const payloadData = this.createPayload();
 
     try {
-      const response = await this.clientInstance.get("client/movements", {
-        headers: payloadData.headers,
-      });
-
-      console.log(response.data);
+      const response = await this.clientInstance.get(
+        `accounts/${this.currentAccountId}/movements`,
+        {
+          headers: payloadData.headers,
+        }
+      );
 
       var plainData = this.decodeServerPayload(response.data);
       return plainData;
     } catch (err) {
+      //console.error(err);
       handleRequestError(err);
       return [];
     }
   }
 
-  public async getExpenses(): Promise<string[]> {
+  public async getExpenses() {
     const payloadData = this.createPayload();
 
     try {
-      const response = await this.clientInstance.get("client/expenses", {
-        headers: payloadData.headers,
-      });
-
-      console.log(response.data);
+      const response = await this.clientInstance.get(
+        `accounts/${this.currentAccountId}/expenses`,
+        {
+          headers: payloadData.headers,
+        }
+      );
 
       var plainData = this.decodeServerPayload(response.data);
       return plainData;
@@ -247,7 +250,8 @@ class BlingBankClient {
 
 enum CLIOption {
   Movements,
-  Payments,
+  AuthorizePayment,
+  CreatePayment,
   Expenses,
   Exit,
 }
@@ -265,20 +269,54 @@ async function accountManagementCLI(client: BlingBankClient, accountData: any) {
       choices: [
         { title: "Movements", value: CLIOption.Movements },
         { title: "Expenses", value: CLIOption.Expenses },
-        { title: "Authorize payment", value: CLIOption.Payments },
-        { title: "Exit", value: CLIOption.Exit },
+        { title: "Create payment order", value: CLIOption.CreatePayment },
+        { title: "Authorize payment", value: CLIOption.AuthorizePayment },
+        { title: "Back", value: CLIOption.Exit },
       ],
     });
 
+    console.clear();
+
     switch (accountManagement.accountOperation as CLIOption) {
       case CLIOption.Movements:
-        console.log("Movements:");
+        await DisplayData.display(
+          DisplayMovements,
+          await client.getMovements()
+        );
         break;
       case CLIOption.Expenses:
         console.log("Expenses:");
+        const expenses = await client.getExpenses();
+        await DisplayData.display(
+          DisplayExpenses,
+          Object.keys(expenses).map((expenseKey) => {
+            return { category: expenseKey, content: expenses[expenseKey] };
+          })
+        );
         break;
-      case CLIOption.Payments:
-        console.log("Payments:");
+      case CLIOption.CreatePayment:
+        console.log("Create Payment Order:");
+        const paymentOrder = await prompts([
+          {
+            type: "text",
+            name: "entity",
+            message: `entity:`,
+          },
+          {
+            type: "text",
+            name: "ammount",
+            message: `ammount:`,
+          },
+          {
+            type: "text",
+            name: "description",
+            message: `description:`,
+          },
+        ]);
+        //faltam cenas
+        break;
+      case CLIOption.AuthorizePayment:
+        console.log("Authorize Payment:");
         break;
       case CLIOption.Exit:
         return;
@@ -287,7 +325,7 @@ async function accountManagementCLI(client: BlingBankClient, accountData: any) {
 }
 
 async function main() {
-  const client = new BlingBankClient("http://192.168.2.170:3000/");
+  const client = new BlingBankClient("http://localhost:3000/");
 
   console.clear();
 

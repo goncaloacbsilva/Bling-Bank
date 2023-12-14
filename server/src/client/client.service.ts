@@ -11,7 +11,7 @@ import { Model } from "mongoose";
 import { InjectModel } from "@nestjs/mongoose";
 import { LoginDto, RawLoginDto } from "./dtos/login.dto";
 import { KeyObject, createPrivateKey, createPublicKey } from "crypto";
-import { writeFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import {
   decryptAsymmetricData,
   generateAsymmetricKeys,
@@ -42,26 +42,15 @@ export class ClientService {
     @InjectModel(Session.name) private readonly sessionModel: Model<Session>,
     private configService: ConfigService
   ) {
-    this.logger.log("Generating server keypair...");
+    this.logger.log("Reading server keypair...");
 
     const keysPath = this.configService.getOrThrow<string>("KEYS_PATH");
 
-    const { publicKey, privateKey } = generateAsymmetricKeys();
-
-    this.privateKey = privateKey;
-
-    this.logger.log("Exporting keys...");
-
-    writeFileSync(
-      `${keysPath}/server_public.pem`,
-      publicKey.export({ type: "spki", format: "pem" })
-    );
-    writeFileSync(
-      `${keysPath}/server_private.pem`,
-      privateKey.export({ type: "pkcs8", format: "pem" })
-    );
-
-    this.logger.log(`Keys exported to: ${keysPath}`);
+    this.privateKey = createPrivateKey({
+      key: readFileSync(`${keysPath}/server_private.pem`),
+      type: "pkcs8",
+      format: "pem",
+    });
   }
 
   @Cron(CronExpression.EVERY_MINUTE)

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -26,6 +27,9 @@ import { ConfigService } from "@nestjs/config";
 import { Account } from "src/account/schemas/account.schema";
 import { DateTime } from "luxon";
 import { Cron, CronExpression } from "@nestjs/schedule";
+import { checkNonce } from "src/utils/replayProtect";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
 
 @Injectable()
 export class ClientService {
@@ -33,6 +37,7 @@ export class ClientService {
   private privateKey: KeyObject;
 
   constructor(
+    @Inject(CACHE_MANAGER) private nonceCache: Cache,
     @InjectModel(Client.name) private readonly clientModel: Model<Client>,
     @InjectModel(Session.name) private readonly sessionModel: Model<Session>,
     private configService: ConfigService
@@ -97,6 +102,9 @@ export class ClientService {
   async login(encodedLoginDto: ProtectedData & { publicKey: string }) {
     let loginData = undefined;
 
+    // Replay attack check
+    await checkNonce(this.nonceCache, encodedLoginDto.nonce);
+
     try {
       loginData = decryptAsymmetricData(encodedLoginDto, this.privateKey);
     } catch (err: any) {
@@ -138,7 +146,7 @@ export class ClientService {
       sessionKey: sessionKey.export().toString("base64"),
       client: client,
       publicKey: encodedLoginDto.publicKey,
-      expire: DateTime.now().plus({ minutes: 10 }).toISODate(),
+      expire: DateTime.now().plus({ minutes: 10 }).toISO(),
     });
 
     await session.save();

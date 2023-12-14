@@ -5,30 +5,27 @@ import {
   CallHandler,
   BadRequestException,
   NotFoundException,
+  Inject,
 } from "@nestjs/common";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
-import {
-  ProtectedData,
-  check,
-  cipherData,
-  micMatch,
-  protect,
-  secureHash,
-  unprotect,
-  verifyMac,
-} from "@securelib";
-import { isMongoId, validateSync } from "class-validator";
+import { ProtectedData, protect, unprotect, verifyMac } from "@securelib";
+import { isBase64, isMongoId, validateSync } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import { SecureData } from "./secure.dto";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Session } from "src/client/schemas/client.schema";
 import { createSecretKey } from "crypto";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
+import { Duration } from "luxon";
+import { checkNonce } from "src/utils/replayProtect";
 
 @Injectable()
 export class SecureDataInterceptor implements NestInterceptor {
   constructor(
+    @Inject(CACHE_MANAGER) private nonceCache: Cache,
     @InjectModel(Session.name) private readonly sessionModel: Model<Session>
   ) {}
 
@@ -38,11 +35,26 @@ export class SecureDataInterceptor implements NestInterceptor {
   ): Promise<Observable<any>> {
     const req = context.switchToHttp().getRequest();
 
-    if (!req.headers["session-id"])
-      throw new BadRequestException("Missing session header");
+    // Initial headers check
+
+    if (
+      !req.headers["mic"] ||
+      !req.headers["nonce"] ||
+      !req.headers["session-id"]
+    )
+      throw new BadRequestException("Missing security headers");
 
     if (!isMongoId(req.headers["session-id"]))
       throw new BadRequestException("Invalid session header");
+
+    if (!isBase64(req.headers["mic"]))
+      throw new BadRequestException("Invalid integrity code");
+
+    if (!isBase64(req.headers["nonce"]))
+      throw new BadRequestException("Invalid nonce");
+
+    // Replay attack check
+    await checkNonce(this.nonceCache, req.headers["nonce"]);
 
     // Analyze the risk of not verify the integrity of the "session-id -> report
     const session = await this.sessionModel

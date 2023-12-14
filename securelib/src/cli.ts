@@ -21,7 +21,7 @@ import { DateTime } from "luxon";
 function encodeLoginData(data: any) {
   const serverPublicKey = createPublicKey({
     key: readFileSync(
-      "/home/goncalo/Documents/IST/SIRS/t49-goncalo-miguel-renato/keys/server_public.pem"
+      "/Users/goncalo/Desktop/IST - MEIC/1st year/2nd Quarter/SIRS/t49-goncalo-miguel-renato/keys/server_public.pem"
     ),
     format: "pem",
     type: "spki",
@@ -135,7 +135,7 @@ class BlingBankClient {
     return unprotect(data, this.session.key);
   }
 
-  public async getAccounts(): Promise<string[]> {
+  public async getAccounts(): Promise<string[] | undefined> {
     const payloadData = this.createPayload();
 
     try {
@@ -144,10 +144,11 @@ class BlingBankClient {
       });
 
       var plainData = this.decodeServerPayload(response.data);
+
       return plainData;
     } catch (err) {
+      console.log("ERROR");
       handleRequestError(err);
-      return [];
     }
   }
 
@@ -617,6 +618,8 @@ async function main() {
   //add person name
   console.log("Welcome back\n");
   const accounts = await client.getAccounts();
+
+  if (!accounts) return;
 
   while (true) {
     const accountSelection = await prompts({

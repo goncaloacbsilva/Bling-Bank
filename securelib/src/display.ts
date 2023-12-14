@@ -1,3 +1,4 @@
+import { DateTime } from "luxon";
 import prompts from "prompts";
 
 abstract class Display {
@@ -29,20 +30,20 @@ export class DisplayMovements extends Display {
   displayElement(data: any): void {
     console.log("");
     console.log("Movement:");
-    console.log("date: ", data.date);
-    console.log("amount: ", data.amount);
-    console.log("description: ", data.description);
+    console.log("date:", DateTime.fromISO(data.date).toLocaleString());
+    console.log("amount:", data.amount);
+    console.log("description:", data.description);
   }
 }
 
 export class DisplayExpenses extends Display {
   displayElement(data: any): void {
     console.log("");
-    console.log(data.category, ":");
+    console.log(`${data.category}:`);
     data.content.forEach((movement: any) => {
       console.log("");
-      console.log(" date: ", movement.date);
-      console.log(" amount: ", movement.amount);
+      console.log(" date:", DateTime.fromISO(movement.date).toLocaleString());
+      console.log(` amount: ${movement.amount} ${data.currency}`);
     });
     console.log("");
   }

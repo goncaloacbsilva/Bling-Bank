@@ -8,7 +8,13 @@ import {
   AccountMovement,
   AccountMovementSchema,
 } from "src/account/schemas/movement.schema";
-import { Client, ClientSchema } from "src/client/schemas/client.schema";
+import {
+  Client,
+  ClientSchema,
+  Session,
+  SessionSchema,
+} from "src/client/schemas/client.schema";
+import { AccountModule } from "src/account/account.module";
 
 @Module({
   imports: [
@@ -17,7 +23,9 @@ import { Client, ClientSchema } from "src/client/schemas/client.schema";
       { name: AccountMovement.name, schema: AccountMovementSchema },
       { name: Payment.name, schema: PaymentSchema },
       { name: Client.name, schema: ClientSchema },
+      { name: Session.name, schema: SessionSchema },
     ]),
+    AccountModule,
   ],
   controllers: [PaymentController],
   providers: [PaymentService],

@@ -22,6 +22,12 @@ export class Session {
 
   @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: Client.name }])
   client: Client;
+
+  @Prop()
+  publicKey: string;
+
+  @Prop()
+  expire: string;
 }
 
 export type ClientHydrated = HydratedDocument<Client>;

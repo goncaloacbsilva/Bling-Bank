@@ -13,8 +13,6 @@ import {
   Session,
   SessionSchema,
 } from "../client/schemas/client.schema";
-import { APP_INTERCEPTOR } from "@nestjs/core";
-import { SecureDataInterceptor } from "src/interceptors/securedata.interceptor";
 
 @Module({
   imports: [
@@ -27,5 +25,6 @@ import { SecureDataInterceptor } from "src/interceptors/securedata.interceptor";
   ],
   controllers: [AccountController],
   providers: [AccountService],
+  exports: [AccountService],
 })
 export class AccountModule {}

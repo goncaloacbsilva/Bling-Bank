@@ -48,7 +48,7 @@ export const seedAccounts: AccountDto[] = [
     currency: "EUR",
     movements: [
       {
-        date: "10/12/2023",
+        date: "2023-10-12",
         amount: 150,
         description: "Casino",
       },
@@ -59,17 +59,17 @@ export const seedAccounts: AccountDto[] = [
     currency: "USD",
     movements: [
       {
-        date: "12/12/2023",
+        date: "2023-10-12",
         amount: -75,
         description: "Water bill",
       },
       {
-        date: "12/12/2023",
+        date: "2023-10-12",
         amount: -1005,
         description: "Water bill",
       },
       {
-        date: "26/11/2023",
+        date: "2023-11-26",
         amount: 1500,
         description: "Salary",
       },
@@ -83,6 +83,12 @@ export const seedAccounts: AccountDto[] = [
   {
     accountHolders: ["Bob", "Eve", "Carol", "Walter"],
     currency: "CHF",
-    movements: [],
+    movements: [
+      {
+        date: "2023-11-26",
+        amount: 800000,
+        description: "Salary",
+      },
+    ],
   },
 ];

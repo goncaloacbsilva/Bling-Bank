@@ -1,4 +1,10 @@
-import { IsDateString, IsMongoId, IsNumber, IsString } from "class-validator";
+import {
+  IsDateString,
+  IsMongoId,
+  IsNegative,
+  IsNumber,
+  IsString,
+} from "class-validator";
 
 export class CreatePaymentDto {
   @IsDateString()
@@ -7,8 +13,8 @@ export class CreatePaymentDto {
   @IsString()
   entity: string;
 
-  @IsNumber()
-  ammount: number;
+  @IsNegative()
+  amount: number;
 
   @IsString()
   description: string;

@@ -2,9 +2,11 @@ import { KeyObject, createPublicKey, createSecretKey } from "crypto";
 import {
   ProtectedData,
   generateAsymmetricKeys,
+  generateMac,
   protect,
   protectAsymmetricClient,
   secureHash,
+  signData,
   unprotect,
   unprotectAsymmetric,
 } from "./index";
@@ -12,13 +14,14 @@ import { readFileSync } from "fs";
 import prompts, { Choice } from "prompts";
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { DisplayData, DisplayExpenses, DisplayMovements } from "./display";
+import { DateTime } from "luxon";
 
 // Auxiliary functions
 
 function encodeLoginData(data: any) {
   const serverPublicKey = createPublicKey({
     key: readFileSync(
-      "/Users/goncalo/Desktop/IST - MEIC/1st year/2nd Quarter/SIRS/t49-goncalo-miguel-renato/keys/server_public.pem"
+      "/home/goncalo/Documents/IST/SIRS/t49-goncalo-miguel-renato/keys/server_public.pem"
     ),
     format: "pem",
     type: "spki",
@@ -35,10 +38,7 @@ function handleRequestError(err: any) {
   if (error.response) {
     const responseData: any = error.response.data;
 
-    console.error(
-      "Authentication Error:",
-      responseData["message"] ?? "Unknown error"
-    );
+    console.error("Error:", responseData["message"] ?? "Unknown error");
   } else {
     console.error(err);
   }
@@ -105,6 +105,17 @@ class BlingBankClient {
       protectedPayload = protect(data, this.session.key);
     } else {
       protectedPayload = protect("", this.session.key);
+
+      // Use mac instead of mic (relatorio)
+      protectedPayload = {
+        ...protectedPayload,
+        mic: generateMac(
+          {
+            nonce: protectedPayload.nonce,
+          },
+          this.session.key
+        ),
+      };
     }
 
     return {
@@ -246,19 +257,254 @@ class BlingBankClient {
 
     return true;
   }
+
+  public async createPaymentOrder() {
+    console.log("Create Payment Order:");
+    const paymentOrder = await prompts([
+      {
+        type: "text",
+        name: "entity",
+        message: `entity:`,
+      },
+      {
+        type: "number",
+        name: "amount",
+        message: `amount:`,
+        validate: (value) =>
+          value < 0 ? `Negative amounts are not allowed` : true,
+      },
+      {
+        type: "text",
+        name: "description",
+        message: `description:`,
+      },
+    ]);
+
+    const payloadData = this.createPayload({
+      date: DateTime.now().toISODate(),
+      entity: paymentOrder.entity,
+      amount: Math.abs(paymentOrder.amount) * -1,
+      description: paymentOrder.description,
+      accountId: this.currentAccountId,
+    });
+
+    try {
+      const response = await this.clientInstance.post(
+        `payments`,
+        {
+          data: payloadData.body,
+        },
+        {
+          headers: payloadData.headers,
+        }
+      );
+
+      var plainData = this.decodeServerPayload(response.data);
+
+      await this.authorizePayment(plainData._id);
+    } catch (err) {
+      handleRequestError(err);
+    }
+  }
+
+  public async pendingPayments() {
+    while (true) {
+      const payloadData = this.createPayload();
+      let pending;
+      try {
+        const response = await this.clientInstance.get(
+          `payments/pending/${this.currentAccountId}`,
+          {
+            headers: payloadData.headers,
+          }
+        );
+
+        pending = this.decodeServerPayload(response.data);
+      } catch (err) {
+        handleRequestError(err);
+        return [];
+      }
+
+      const paymentSelection = await prompts({
+        type: "select",
+        name: "paymentId",
+        message: "Choose a payment to authorize: ",
+        choices: [
+          ...pending.map((payment: any) => ({
+            title: `${payment._id} (${payment.description})`,
+            value: payment._id,
+          })),
+          { title: "Back", value: CLIOption.Exit },
+        ],
+      });
+
+      console.clear();
+
+      if (paymentSelection.paymentId === CLIOption.Exit) return;
+
+      await this.authorizePayment(paymentSelection.paymentId);
+    }
+  }
+
+  public async authorizePayment(paymentId: string) {
+    console.clear();
+
+    let payloadData = this.createPayload();
+    let client;
+    try {
+      const response = await this.clientInstance.get(`client`, {
+        headers: payloadData.headers,
+      });
+
+      client = this.decodeServerPayload(response.data);
+    } catch (err) {
+      handleRequestError(err);
+      return;
+    }
+
+    let payment;
+    payloadData = this.createPayload();
+    try {
+      const response = await this.clientInstance.get(`payments/${paymentId}`, {
+        headers: payloadData.headers,
+      });
+
+      payment = this.decodeServerPayload(response.data);
+    } catch (err) {
+      handleRequestError(err);
+      return;
+    }
+
+    console.log("Authorize Payment:\n");
+    console.log(`Id: ${paymentId}`);
+    console.log(`Date: ${DateTime.fromISO(payment.date).toLocaleString()}`);
+    console.log(`Entity: ${payment.entity}`);
+    console.log(`Amount: ${payment.amount}`);
+    console.log(`Description: ${payment.description}\n`);
+
+    // Check if payment is already signed by us
+
+    const holdersIds = payment.holdersSignatures.map(
+      (signature: any) => signature.clientId
+    );
+
+    if (holdersIds.includes(client._id)) {
+      await prompts({
+        type: "select",
+        name: "back",
+        message:
+          "You already approved this payment, waiting for the other holders to approve",
+        choices: [{ title: "Back", value: CLIOption.Exit }],
+      });
+      console.clear();
+      return;
+    }
+
+    const confirm = await prompts({
+      type: "confirm",
+      name: "proceed",
+      message: `Are you sure you want to proceed with the payment?`,
+    });
+
+    if (!confirm.proceed) {
+      console.clear();
+      return;
+    }
+
+    //get clientId
+
+    const signedData = signData(
+      {
+        clientId: client._id,
+        paymentId: paymentId,
+      },
+      this.clientKeys.privateKey
+    );
+
+    payloadData = this.createPayload({
+      paymentId: paymentId,
+      signature: signedData,
+    });
+
+    try {
+      const response = await this.clientInstance.post(
+        `payments/authorize`,
+        {
+          data: payloadData.body,
+        },
+        {
+          headers: payloadData.headers,
+        }
+      );
+
+      var plainData = this.decodeServerPayload(response.data);
+
+      console.clear();
+      console.log("Payment Authorized");
+    } catch (err) {
+      handleRequestError(err);
+    }
+  }
 }
 
 enum CLIOption {
   Movements,
-  AuthorizePayment,
-  CreatePayment,
   Expenses,
+  Payments,
   Exit,
 }
 
-async function accountManagementCLI(client: BlingBankClient, accountData: any) {
+enum CLIPaymentOption {
+  CreatePayment,
+  AuthorizePayment,
+}
+
+async function paymentManagementCLI(client: BlingBankClient) {
+  console.clear();
+  while (true) {
+    const paymentManagement = await prompts({
+      type: "select",
+      name: "paymentOperation",
+      message: "Choose an option",
+      choices: [
+        {
+          title: "Create payment order",
+          value: CLIPaymentOption.CreatePayment,
+        },
+        {
+          title: "Authorize payment",
+          value: CLIPaymentOption.AuthorizePayment,
+        },
+        { title: "Back", value: CLIOption.Exit },
+      ],
+    });
+
+    console.clear();
+
+    switch (paymentManagement.paymentOperation) {
+      case CLIPaymentOption.CreatePayment:
+        await client.createPaymentOrder();
+        break;
+      case CLIPaymentOption.AuthorizePayment:
+        await client.pendingPayments();
+        break;
+      case CLIOption.Exit:
+        return;
+    }
+  }
+}
+
+async function accountManagementCLI(
+  client: BlingBankClient,
+  accountId: string
+) {
   while (true) {
     console.clear();
+
+    const accountData = await client.setAccount(accountId);
+
+    if (!accountData) process.exit();
+
     console.log("Account", accountData._id);
     console.log(`Balance: ${accountData.balance} ${accountData.currency}`);
 
@@ -269,8 +515,7 @@ async function accountManagementCLI(client: BlingBankClient, accountData: any) {
       choices: [
         { title: "Movements", value: CLIOption.Movements },
         { title: "Expenses", value: CLIOption.Expenses },
-        { title: "Create payment order", value: CLIOption.CreatePayment },
-        { title: "Authorize payment", value: CLIOption.AuthorizePayment },
+        { title: "Payments", value: CLIOption.Payments },
         { title: "Back", value: CLIOption.Exit },
       ],
     });
@@ -279,9 +524,16 @@ async function accountManagementCLI(client: BlingBankClient, accountData: any) {
 
     switch (accountManagement.accountOperation as CLIOption) {
       case CLIOption.Movements:
+        const movements = await client.getMovements();
+
         await DisplayData.display(
           DisplayMovements,
-          await client.getMovements()
+          movements.map((movement: any) => {
+            return {
+              ...movement,
+              amount: `${movement.amount} ${accountData.currency}`,
+            };
+          })
         );
         break;
       case CLIOption.Expenses:
@@ -290,33 +542,16 @@ async function accountManagementCLI(client: BlingBankClient, accountData: any) {
         await DisplayData.display(
           DisplayExpenses,
           Object.keys(expenses).map((expenseKey) => {
-            return { category: expenseKey, content: expenses[expenseKey] };
+            return {
+              category: expenseKey,
+              content: expenses[expenseKey],
+              currency: accountData.currency,
+            };
           })
         );
         break;
-      case CLIOption.CreatePayment:
-        console.log("Create Payment Order:");
-        const paymentOrder = await prompts([
-          {
-            type: "text",
-            name: "entity",
-            message: `entity:`,
-          },
-          {
-            type: "text",
-            name: "ammount",
-            message: `ammount:`,
-          },
-          {
-            type: "text",
-            name: "description",
-            message: `description:`,
-          },
-        ]);
-        //faltam cenas
-        break;
-      case CLIOption.AuthorizePayment:
-        console.log("Authorize Payment:");
+      case CLIOption.Payments:
+        await paymentManagementCLI(client);
         break;
       case CLIOption.Exit:
         return;
@@ -399,10 +634,8 @@ async function main() {
 
     if (accountSelection.accountId === CLIOption.Exit) return;
 
-    // Select account
-    const accountData = await client.setAccount(accountSelection.accountId);
+    await accountManagementCLI(client, accountSelection.accountId);
 
-    if (accountData) await accountManagementCLI(client, accountData);
     console.clear();
   }
 }

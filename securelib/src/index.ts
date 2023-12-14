@@ -33,6 +33,20 @@ export function micMatch(mic: string, cipheredData: any): boolean {
   return secureHash(cipheredData) === mic;
 }
 
+export function generateMac(data: any, privateKey: crypto.KeyObject) {
+  const hmac = crypto.createHmac("sha256", privateKey);
+  hmac.update(JSON.stringify(data));
+  return hmac.digest("base64");
+}
+
+export function verifyMac(
+  data: any,
+  privateKey: crypto.KeyObject,
+  hmacToCompare: string
+) {
+  return hmacToCompare === generateMac(data, privateKey);
+}
+
 export function cipherData(data: any, secret: crypto.KeyObject): CipherResult {
   const nonce = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv("aes-256-cbc", secret, nonce);

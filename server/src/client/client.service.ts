@@ -24,6 +24,8 @@ import { plainToInstance } from "class-transformer";
 import { validateSync } from "class-validator";
 import { ConfigService } from "@nestjs/config";
 import { Account } from "src/account/schemas/account.schema";
+import { DateTime } from "luxon";
+import { Cron, CronExpression } from "@nestjs/schedule";
 
 @Injectable()
 export class ClientService {
@@ -57,8 +59,31 @@ export class ClientService {
     this.logger.log(`Keys exported to: ${keysPath}`);
   }
 
+  @Cron(CronExpression.EVERY_MINUTE)
+  async checkSessions() {
+    this.logger.log("[Sessions Management]: Pruning expired sessions...");
+
+    const sessions = await this.sessionModel.find().exec();
+
+    const sessionsToDelete = sessions
+      .filter((session) => {
+        return DateTime.fromISO(session.expire) < DateTime.now();
+      })
+      .map((session) => session._id);
+
+    await this.sessionModel.deleteMany({
+      _id: {
+        $in: sessionsToDelete,
+      },
+    });
+  }
+
   findAll() {
     return this.clientModel.find().exec();
+  }
+
+  async findOne(clientId: string): Promise<Client> {
+    return await this.clientModel.findById(clientId).exec();
   }
 
   async findAccounts(clientId: string): Promise<Account[]> {
@@ -112,6 +137,8 @@ export class ClientService {
     const session = new this.sessionModel({
       sessionKey: sessionKey.export().toString("base64"),
       client: client,
+      publicKey: encodedLoginDto.publicKey,
+      expire: DateTime.now().plus({ minutes: 10 }).toISODate(),
     });
 
     await session.save();

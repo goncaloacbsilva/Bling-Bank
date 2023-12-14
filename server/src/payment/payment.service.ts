@@ -4,38 +4,31 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  OnModuleInit,
 } from "@nestjs/common";
-import {
-  KeyObject,
-  createPublicKey,
-  createSecretKey,
-  randomBytes,
-  scryptSync,
-} from "crypto";
+import { createPublicKey } from "crypto";
 
 import { InjectModel } from "@nestjs/mongoose";
 
-import { Model } from "mongoose";
+import { Model, ObjectId, Types, Document } from "mongoose";
 import { DateTime } from "luxon";
-import { Account } from "src/account/schemas/account.schema";
-import { AccountMovement } from "src/account/schemas/movement.schema";
 import { CreatePaymentDto } from "./dtos/createPayment.dto";
 import { HolderSignature, Payment } from "./schemas/payment.schema";
-import { checkSignature } from "../../../securelib/src";
+import { checkSignature } from "@securelib";
 import { AuthorizePaymentDto } from "./dtos/authorizePayment.dto";
-import { Client } from "src/client/schemas/client.schema";
+import { Session } from "src/client/schemas/client.schema";
+import { AccountService } from "src/account/account.service";
+import { CreateAccountMovementDto } from "src/account/dtos/createMovement.dto";
+import { Account } from "src/account/schemas/account.schema";
 
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
 
   constructor(
-    @InjectModel(Account.name) private readonly accountModel: Model<Account>,
     @InjectModel(Payment.name) private readonly paymentModel: Model<Payment>,
-    @InjectModel(Client.name) private readonly clientModel: Model<Client>,
-    @InjectModel(AccountMovement.name)
-    private readonly accountMovementModel: Model<AccountMovement>
+    @InjectModel(Account.name) private readonly accountModel: Model<Account>,
+    @InjectModel(Session.name) private readonly sessionModel: Model<Session>,
+    private readonly accountService: AccountService
   ) {}
 
   // Auxiliary functions
@@ -60,25 +53,58 @@ export class PaymentService {
     );
   }
 
-  private checkPaymentSignatures(paymentId: string, payment: Payment): boolean {
-    var isValidSignature = false;
+  private checkPaymentSignatures(
+    paymentId: string,
+    payment: Document<unknown, {}, Payment> &
+      Payment & {
+        _id: Types.ObjectId;
+      }
+  ): boolean {
+    const verifiedHolders = new Set<string>();
+    const accountHolders = new Set<string>();
+
+    payment.account[0].holders.forEach((holder: ObjectId) =>
+      accountHolders.add(holder.toString())
+    );
+
     payment.holdersSignatures.forEach((signature) => {
-      isValidSignature = this.checkHolderSignature(signature, paymentId);
+      if (this.checkHolderSignature(signature, paymentId)) {
+        verifiedHolders.add(signature.clientId);
+      }
     });
 
-    return isValidSignature;
+    return (
+      accountHolders.size === verifiedHolders.size &&
+      [...verifiedHolders].every((x) => accountHolders.has(x))
+    );
   }
 
-  // Allows an entity to emit payments to accounts
+  // Exposed functions
 
-  async createPayment(createPaymentDto: CreatePaymentDto) {
-    const account = await this.accountModel
-      .findById(createPaymentDto.accountId)
+  async findPayment(clientId: string, paymentId: string) {
+    const payment = await this.paymentModel
+      .findById(paymentId)
+      .populate("account")
       .exec();
 
-    if (!account) throw new NotFoundException("Account not found");
+    if (!payment) throw new NotFoundException("Payment not found");
 
-    if (account.balance + createPaymentDto.ammount < 0)
+    const holdersIds = payment.account[0].holders.map((holder: ObjectId) =>
+      holder.toString()
+    );
+
+    if (!holdersIds.includes(clientId)) throw new ForbiddenException();
+
+    return payment;
+  }
+
+  async createPayment(clientId: string, createPaymentDto: CreatePaymentDto) {
+    const account = await this.accountService.findAccount(
+      clientId,
+      createPaymentDto.accountId
+    );
+
+    if (account.balance + createPaymentDto.amount < 0)
       throw new BadRequestException("Insufficient funds");
 
     if (
@@ -91,48 +117,92 @@ export class PaymentService {
     const payment = new this.paymentModel({
       date: DateTime.fromISO(createPaymentDto.date),
       entity: createPaymentDto.entity,
-      ammount: createPaymentDto.ammount,
+      amount: createPaymentDto.amount,
       description: createPaymentDto.description,
       account: account,
     });
 
     account.paymentOrders.push(payment);
 
-    return await payment.save();
+    await Promise.all([account.save(), payment.save()]);
+
+    return payment;
   }
 
-  async authorizePayment(authorizePaymentDto: AuthorizePaymentDto) {
-    const payment = await this.paymentModel
-      .findById(authorizePaymentDto.paymentId)
-      .exec();
-    const client = await this.clientModel.findById("").exec();
+  async getPendingPayments(
+    clientId: string,
+    accountId: string
+  ): Promise<Payment[]> {
+    const account = await this.accountService.findAccount(clientId, accountId);
+    const accountWithPayments = await account.populate("paymentOrders");
 
-    if (!payment) throw new NotFoundException("Payment not found");
-    if (!payment.account.holders.includes(client))
-      throw new ForbiddenException();
+    return accountWithPayments.paymentOrders.filter(
+      (payment) => !payment.completed
+    );
+  }
+
+  async authorizePayment(
+    sessionId: string,
+    clientId: string,
+    authorizePaymentDto: AuthorizePaymentDto
+  ) {
+    const payment = await this.findPayment(
+      clientId,
+      authorizePaymentDto.paymentId
+    );
 
     if (payment.completed)
       throw new BadRequestException("This payment was already processed");
+
+    const session = await this.sessionModel.findById(sessionId).exec();
+
+    const holderSignature: HolderSignature = {
+      clientId: clientId,
+      publicKey: session.publicKey,
+      signature: authorizePaymentDto.signature,
+    };
+
+    if (
+      !this.checkHolderSignature(holderSignature, authorizePaymentDto.paymentId)
+    )
+      throw new BadRequestException("Signatures don't match");
+
+    payment.holdersSignatures.push(holderSignature);
+    await payment.save();
+
+    if (this.checkPaymentSignatures(authorizePaymentDto.paymentId, payment)) {
+      this.logger.log(`Processing payment ${authorizePaymentDto.paymentId}`);
+      await this.processPayment(payment);
+    }
+
+    return payment;
   }
 
-  async processPayment(payment: Payment) {
-    const movement = new this.accountMovementModel({
-      date: payment.date,
-      ammount: payment.ammount,
-      description: payment.description,
-      account: payment.account,
-      paymentOrder: payment,
-    });
-
-    if (payment.account.balance + payment.ammount < 0)
+  async processPayment(
+    payment: Document<unknown, {}, Payment> &
+      Payment & {
+        _id: Types.ObjectId;
+      }
+  ) {
+    if (payment.account.balance + payment.amount < 0)
       throw new BadRequestException("Insufficient funds");
 
-    //autosave?
-    payment.account.balance = payment.account.balance + payment.ammount;
+    console.log(payment.account);
 
-    payment.account.movements.push(movement);
+    const account = await this.accountModel.findById(payment.account[0]._id);
+
+    const createMovementDto = new CreateAccountMovementDto();
+    createMovementDto.date = payment.date;
+    createMovementDto.amount = payment.amount;
+    createMovementDto.description = payment.description;
+
+    const movement = this.accountService.createMovement(
+      account,
+      createMovementDto
+    );
+
     payment.completed = true;
 
-    return await movement.save();
+    await Promise.all([movement.save(), account.save(), payment.save()]);
   }
 }

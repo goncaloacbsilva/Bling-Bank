@@ -15,13 +15,13 @@ export interface HolderSignature {
 @Schema()
 export class Payment {
   @Prop()
-  date: DateTime;
+  date: string;
 
   @Prop()
   entity: string;
 
   @Prop()
-  ammount: number;
+  amount: number;
 
   @Prop()
   description: string;

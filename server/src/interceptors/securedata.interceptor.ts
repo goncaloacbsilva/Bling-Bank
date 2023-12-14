@@ -16,6 +16,7 @@ import {
   protect,
   secureHash,
   unprotect,
+  verifyMac,
 } from "@securelib";
 import { isMongoId, validateSync } from "class-validator";
 import { plainToInstance } from "class-transformer";
@@ -48,13 +49,13 @@ export class SecureDataInterceptor implements NestInterceptor {
       .findById(req.headers["session-id"])
       .exec();
 
-    const sessionKey = createSecretKey(
-      Buffer.from(session.sessionKey, "base64")
-    );
-
     if (!session) {
       throw new NotFoundException("Invalid session");
     }
+
+    const sessionKey = createSecretKey(
+      Buffer.from(session.sessionKey, "base64")
+    );
 
     req.sessionClientId = session.client[0].toString();
 
@@ -75,13 +76,15 @@ export class SecureDataInterceptor implements NestInterceptor {
       // Decrypt request
       req.body = unprotect(protectedPacket, sessionKey);
     } else {
-      const micDebug = {
-        mic: req.headers["mic"],
-        nonce: req.headers["nonce"],
-        data: "",
-      };
-
-      if (!check(micDebug))
+      if (
+        !verifyMac(
+          {
+            nonce: req.headers["nonce"],
+          },
+          sessionKey,
+          req.headers["mic"]
+        )
+      )
         throw new BadRequestException("Integrity protection fault");
     }
 

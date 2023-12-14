@@ -19,14 +19,20 @@ import { Client } from "src/decorators/client.decorator";
 export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 
-  @Get()
+  @Get("all")
   findAll() {
     return this.clientService.findAll();
   }
 
-  @Get("accounts")
+  @Get()
   @UseInterceptors(SecureDataInterceptor)
   async findOne(@Client() clientId: string) {
+    return await this.clientService.findOne(clientId);
+  }
+
+  @Get("accounts")
+  @UseInterceptors(SecureDataInterceptor)
+  async findAccounts(@Client() clientId: string) {
     return await this.clientService.findAccounts(clientId);
   }
 

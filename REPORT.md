@@ -38,13 +38,10 @@ export interface ProtectedData {
 
 (_Include challenges faced and how they were overcome._)
 
-We decided to use TypeScript for our project. Also we decided to use mongoDB for our database, for all of our security related methods we use the Crypto library.
-First we decided to implement the server more specifically the account service and its end points, we tested them using postman.
-After testing that our gets and posts were all working connection with the database was established.
-Then, we implemented the interceptor class that handles all of our encripting and decripting and respective checks in our server.
-Finally, we implemented the client so that we could start associating the accounts to users.
+We decided to use TypeScript for our project. For all of our security related methods we use the Crypto library.
+First we implemented the generateSymmetricKey using the method crypto.createSecretKey. Then we implemented the cipherData that encrypts data with the symmetric Key we use crypto.createCipheriv to create the cipher and we use a nonce generated with crypto.randomBytes for our iv. For the decipherData we use crypto.createDecipheriv that uses the same nonce that was generated before as an IV. We then have the method protect that ciphers the data using the cipherData method and also generates the mic. The method check is used to check the integrity of the data using the mic and is used in the uprotect method that deciphers using the decipherData method and checks its integrity.
 
-What we found most dificult was the implementation of our secure library in the interceptors class because when we finally started encripting our payloads the errors were difficult to locate given the fact that we couldn't really see what our payloads contained.
+We decided that our mic inside our ProtectedData is generated using the nonce and the data before encrypting because if the mic was generated after the encryption the mic could regenerated after altering the data without it being detected.
 
 ### 2.2. Infrastructure
 
@@ -60,11 +57,21 @@ What we found most dificult was the implementation of our secure library in the 
 
 (_Explain what keys exist at the start and how are they distributed?_)
 
+The symmetric key is already distributed and is the only key.
+We implemented the interceptor class that handles all of our encripting and decripting and respective checks in our server using our secure libraray.
+
+What we found most dificult was the implementation of our secure library in the interceptors class because when we finally started encripting our payloads the errors were difficult to locate given the fact that we couldn't really see what our payloads contained.
+
 ### 2.3. Security Challenge
 
 #### 2.3.1. Challenge Overview
 
 (_Describe the new requirements introduced in the security challenge and how they impacted your original design._)
+
+1. The payment orders new document format forced us to re-design the way payment orders were initicially created and stored.
+2. Confidentiality, authenticity, and non-repudiation of each transaction forced us to generate asymmetric keys in order to sign all payment orders. We also re-designed what keys existed at the start and how the were exchanged.
+3. Robust freshness measures to prevent duplicate executions of the order we had to implement a function that invalidated previously used nonces.
+4. For accounts with multiple owners, e.g. Alice and Bob, require authorization and non-repudiation from all owners before the payment order is executed this forced us to store all users publick keys in order.
 
 #### 2.3.2. Attacker Model
 

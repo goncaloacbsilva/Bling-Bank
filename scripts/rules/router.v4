@@ -17,6 +17,10 @@
 -A INPUT -p tcp -j REJECT --reject-with tcp-reset
 -A INPUT -j REJECT --reject-with icmp-proto-unreachable
 
+# Allow connections from inside DMZ
+-A FORWARD -i eth0 -o eth2 -m conntrack --ctstate NEW,ESTABLISHED,RELATED -j ACCEPT
+-A FORWARD -i eth2 -o eth0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
 # Forward webserver port 80
 -A FORWARD -i eth1 -o eth0 -p tcp --syn --dport 80 -m conntrack --ctstate NEW -j ACCEPT
 -A FORWARD -i eth1 -o eth0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
@@ -29,6 +33,9 @@ COMMIT
 :INPUT ACCEPT [0:0]
 :OUTPUT ACCEPT [0:0]
 :POSTROUTING ACCEPT [0:0]
+
+# Translate outgoing requests
+-A POSTROUTING -o eth2 -j MASQUERADE
 
 # Translate requests to webserver
 -A PREROUTING -i eth1 -p tcp --dport 80 -j DNAT --to-destination 192.168.0.2

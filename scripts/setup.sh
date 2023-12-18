@@ -1,21 +1,29 @@
 #!/bin/bash
 
 PS3='Run setup for: '
-options=("Client" "Database" "Server" "Quit")
+options=("Client" "Database" "Server" "Border Router" "Quit")
 select opt in "${options[@]}"
 do
     case $opt in
         "Client")
             chmod +x ./setup/configClient.sh
-            ./setup/configClient.sh
+            (cd setup; ./configClient.sh)
+            break
             ;;
         "Database")
             chmod +x ./setup/configDB.sh
-            ./setup/configDB.sh
+            (cd setup; ./configDB.sh)
+            break
             ;;
         "Server")
             chmod +x ./setup/configApi.sh
-            ./setup/configApi.sh
+            (cd setup; ./configApi.sh)
+            break
+            ;;
+        "Border Router")
+            chmod +x ./setup/configRouter.sh
+            (cd setup; ./configRouter.sh)
+            break
             ;;
         "Quit")
             break

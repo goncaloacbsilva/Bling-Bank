@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo "Installling iptables persistence..."
+sudo apt install -y iptables-persistent
+
 echo "Configuring interfaces..."
 sudo ifconfig eth0 192.168.0.1/24 up
 sudo ifconfig eth1 192.168.1.1/24 up

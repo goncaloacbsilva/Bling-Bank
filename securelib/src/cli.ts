@@ -21,7 +21,7 @@ import { DateTime } from "luxon";
 function encodeLoginData(data: any) {
   const serverPublicKey = createPublicKey({
     key: readFileSync(
-      "/Users/goncalo/Desktop/IST - MEIC/1st year/2nd Quarter/SIRS/t49-goncalo-miguel-renato/keys/server_public.pem"
+      "/media/sf_Keys/server_public.pem"
     ),
     format: "pem",
     type: "spki",
@@ -561,7 +561,7 @@ async function accountManagementCLI(
 }
 
 async function main() {
-  const client = new BlingBankClient("http://localhost:3000/");
+  const client = new BlingBankClient("http://192.168.1.1:80/");
 
   console.clear();
 

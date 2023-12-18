@@ -24,22 +24,14 @@ sudo apt install -y npm
 echo "[Setup server]: Installing yarn..."
 sudo npm install -g --unsafe-perm yarn
 
-if [ ! -d "~/blingbank" ]; then
-	echo "[Setup server]: Creating local project folder..."
-	mkdir ~/blingbank
-fi
-
-cp -r ../securelib ~/blingbank
-cp -r ../server ~/blingbank
-
 echo "[Setup server]: Installing dependencies (securelib)..."
-(cd ~/blingbank/securelib; yarn install)
+(cd ~/t49-goncalo-miguel-renato/securelib; yarn install)
 
 echo "[Setup server]: Installing dependencies (server)..."
-(cd ~/blingbank/server; yarn install)
+(cd ~/t49-goncalo-miguel-renato/server; yarn install)
 
 echo "[Setup server]: Building server..."
-(cd ~/blingbank/server; yarn build)
+(cd ~/t49-goncalo-miguel-renato/server; yarn build)
 
 
 # Generate asymmetric keys
@@ -54,8 +46,15 @@ else
 echo "Asymmetric Keys Already Exist"
 fi
 
+if [ ! -f "~/t49-goncalo-miguel-renato/server/.env" ]; then
+    # Content of the .env file
+    echo "KEYS_PATH=\"" > ~/t49-goncalo-miguel-renato/server/.env
+    echo "DB_CONNECTION=\"mongodb://192.168.2.2:27017\"" >> ~/t49-goncalo-miguel-renato/server/.env
+    echo "DB_USE_TLS=\"false\"" >> ~/t49-goncalo-miguel-renato/server/.env
+fi
+
 #Change keys path in .env
-cd ~/blingbank/server
+cd ~/t49-goncalo-miguel-renato/server
 eval NEW_KEYS_PATH="~/.ssh"
 sed -i "s|^KEYS_PATH=.*|KEYS_PATH=\"$NEW_KEYS_PATH\"|" ".env"
 #Copy server public key to shared folder

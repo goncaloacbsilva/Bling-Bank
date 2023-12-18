@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Setup routes
+
+echo "[Network setup]: Configuring interfaces..."
+
+# DMZ
+sudo ifconfig eth0 192.168.0.3/24 up
+# Database
+sudo ifconfig eth1 192.168.2.2/24 up
+# Default Gateway (Router)
+sudo ip route add default via 192.168.0.1
+
+# Setup DNS
+
+echo "[Network setup]: Configuring DNS..."
+
+sudo sed -i "/nameserver/d" /etc/resolv.conf
+echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf
+
+if ! command -v mongo &> /dev/null
+then
+	echo "[Database setup]: Setting up MongoDB..."
+	sudo apt-get install -y mongodb
+	echo "[Database setup]: Creating data folder..."
+	mkdir -p ~/data/db
+fi

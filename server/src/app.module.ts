@@ -33,9 +33,11 @@ import { Duration } from "luxon";
         const useTLS = configService.getOrThrow("DB_USE_TLS") == "true";
 
         if (useTLS) {
+	  options.tls = true;
           options.tlsCertificateKeyFile =
             configService.getOrThrow("TLS_CERT_KEY_PATH");
           options.tlsCAFile = configService.getOrThrow("TLS_CA_PATH");
+	  options.tlsInsecure = true;
           logger.warn(`TLS enabled`);
         }
 

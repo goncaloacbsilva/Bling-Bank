@@ -6,8 +6,8 @@ select opt in "${options[@]}"
 do
     case $opt in
         "Client")
-            chmod +x ./setup/configClient.sh
-            (cd setup; ./configClient.sh)
+            chmod +x ./setup/configCli.sh
+            (cd setup; ./configCli.sh)
             break
             ;;
         "Database")

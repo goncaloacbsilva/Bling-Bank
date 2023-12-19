@@ -21,7 +21,7 @@ echo "[Setup server]: Installing yarn..."
 sudo npm install -g --unsafe-perm yarn
 
 echo "[Setup server]: Installing dependencies (securelib)..."
-(cd ../securelib; yarn install)
+(cd ~/t49-goncalo-miguel-renato/securelib; yarn install)
 
 echo "[Setup server]: Building client..."
-(cd ../securelib; yarn build)
+(cd ~/t49-goncalo-miguel-renato/securelib; yarn build)

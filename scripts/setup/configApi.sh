@@ -46,12 +46,18 @@ else
 echo "Asymmetric Keys Already Exist"
 fi
 
-if [ ! -f "~/t49-goncalo-miguel-renato/server/.env" ]; then
+if [ ! -f ~/t49-goncalo-miguel-renato/server/.env ]; then
     # Content of the .env file
-    echo "KEYS_PATH=\"" > ~/t49-goncalo-miguel-renato/server/.env
+    echo "Generating .env file..."
+    echo "KEYS_PATH=" > ~/t49-goncalo-miguel-renato/server/.env
     echo "DB_CONNECTION=\"mongodb://192.168.2.2:27017\"" >> ~/t49-goncalo-miguel-renato/server/.env
-    echo "DB_USE_TLS=\"false\"" >> ~/t49-goncalo-miguel-renato/server/.env
+    echo "DB_USE_TLS=\"true\"" >> ~/t49-goncalo-miguel-renato/server/.env
+    echo "TLS_CA_PATH=\"/etc/ssl/certs/BlingBank_CA_Root.pem\"" >> ~/t49-goncalo-miguel-renato/server/.env
+    echo "TLS_CERT_KEY_PATH=\"/etc/ssl/certs/BlingBank_Server.pem\"" >> ~/t49-goncalo-miguel-renato/server/.env
+else
+   echo ".env file already exists"
 fi
+
 
 #Change keys path in .env
 cd ~/t49-goncalo-miguel-renato/server
@@ -60,3 +66,8 @@ sed -i "s|^KEYS_PATH=.*|KEYS_PATH=\"$NEW_KEYS_PATH\"|" ".env"
 #Copy server public key to shared folder
 echo "Making a copy of server public key..."
 cp ~/.ssh/server_public.pem /media/sf_Keys/
+
+
+#Set keys for tls
+sudo cp certs/BlingBank_Root_CA.pem /etc/ssl/certs
+sudo cp certs/BlingBank_Server.pem /etc/ssl/certs

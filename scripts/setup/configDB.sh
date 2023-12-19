@@ -4,12 +4,10 @@
 
 echo "[Network setup]: Configuring interfaces..."
 
-# DMZ
-sudo ifconfig eth0 192.168.0.3/24 up
 # Database
-sudo ifconfig eth1 192.168.2.2/24 up
+sudo ifconfig eth0 192.168.2.2/24 up
 # Default Gateway (Router)
-sudo ip route add default via 192.168.0.1
+sudo ip route add default via 192.168.2.1
 
 # Setup DNS
 

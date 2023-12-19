@@ -16,14 +16,13 @@
 -A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable
 -A INPUT -p tcp -j REJECT --reject-with tcp-reset
 -A INPUT -j REJECT --reject-with icmp-proto-unreachable
-
-# Allow connections from inside the DMZ
-
-
-# Forward webserver port 80
--A FORWARD -i eth1 -o eth0 -p tcp --syn --dport 80 -m conntrack --ctstate NEW -j ACCEPT
--A FORWARD -i eth1 -o eth0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+# Allow connection started bt DB
+-A FORWARD -i eth1 -o eth0 -m conntrack --ctstate NEW -j ACCEPT
+# Forward webserver port 27017
+-A FORWARD -i eth0 -o eth1 -p tcp --syn --dport 27017 -m conntrack --ctstate NEW -j ACCEPT
+# Allow connections already established
 -A FORWARD -i eth0 -o eth1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A FORWARD -i eth1 -o eth0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
 COMMIT
 
@@ -33,8 +32,11 @@ COMMIT
 :OUTPUT ACCEPT [0:0]
 :POSTROUTING ACCEPT [0:0]
 
+# Translate outgoing requests
+-A POSTROUTING -o eth0 -j MASQUERADE
+
 # Translate requests to webserver
--A PREROUTING -i eth1 -p tcp --dport 80 -j DNAT --to-destination 192.168.0.2
--A POSTROUTING -o eth0 -p tcp --dport 80 -d 192.168.0.2 -j SNAT --to-source 192.168.0.1
+-A PREROUTING -i eth0 -p tcp --dport 27017 -j DNAT --to-destination 192.168.2.2
+-A POSTROUTING -o eth1 -p tcp --dport 27017 -d 192.168.2.2 -j SNAT --to-source 192.168.2.1
 
 COMMIT

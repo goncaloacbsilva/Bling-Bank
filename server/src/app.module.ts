@@ -1,5 +1,5 @@
 import { Logger, Module } from "@nestjs/common";
-import { MongooseModule } from "@nestjs/mongoose";
+import { MongooseModule, MongooseModuleFactoryOptions } from "@nestjs/mongoose";
 import { AccountModule } from "./account/account.module";
 import { ClientModule } from "./client/client.module";
 import { ConfigModule, ConfigService } from "@nestjs/config";
@@ -24,15 +24,24 @@ import { Duration } from "luxon";
         const logger = new Logger("MongooseModule");
 
         const uri = configService.getOrThrow("DB_CONNECTION");
-        const useTLS = configService.getOrThrow("DB_USE_TLS") == "true";
+        let options: MongooseModuleFactoryOptions = {
+          uri: uri,
+        };
 
         logger.log(`Connecting to ${uri}...`);
-        if (useTLS) logger.warn(`TLS enabled`);
 
-        return {
-          uri: uri,
-          tls: useTLS,
-        };
+        const useTLS = configService.getOrThrow("DB_USE_TLS") == "true";
+
+        if (useTLS) {
+	  options.tls = true;
+          options.tlsCertificateKeyFile =
+            configService.getOrThrow("TLS_CERT_KEY_PATH");
+          options.tlsCAFile = configService.getOrThrow("TLS_CA_PATH");
+	  options.tlsInsecure = true;
+          logger.warn(`TLS enabled`);
+        }
+
+        return options;
       },
       inject: [ConfigService],
     }),

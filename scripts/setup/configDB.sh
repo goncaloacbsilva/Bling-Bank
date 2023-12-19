@@ -23,3 +23,7 @@ then
 	echo "[Database setup]: Creating data folder..."
 	mkdir -p ~/data/db
 fi
+
+#Set keys for tls
+sudo cp certs/BlingBank_Root_CA.pem /etc/ssl/certs
+sudo cp certs/BlingBank_Database.pem /etc/ssl/certs

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PS3='Run setup for: '
-options=("Client" "Database" "Server" "Border Router" "Quit")
+options=("Client" "Database" "Server" "Border Router" "Inner Router" "Quit")
 select opt in "${options[@]}"
 do
     case $opt in
@@ -23,6 +23,11 @@ do
         "Border Router")
             chmod +x ./setup/configRouter.sh
             (cd setup; ./configRouter.sh)
+            break
+            ;;
+	"Inner Router")
+            chmod +x ./setup/configInnerRouter.sh
+            (cd setup; ./configInnerRouter.sh)
             break
             ;;
         "Quit")

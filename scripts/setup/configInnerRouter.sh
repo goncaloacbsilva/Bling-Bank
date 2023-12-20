@@ -18,7 +18,7 @@ echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf
 # Apply iptables config
 
 echo "Configuring firewall rules..."
-sudo cp routerRules /etc/iptables/rules.v4
+sudo cp rules/innerRouter.v4 /etc/iptables/rules.v4
 
 echo "Reloading netfilter service..."
 sudo service netfilter-persistent reload

@@ -91,7 +91,9 @@ export class AccountService implements OnModuleInit {
   // Account
 
   async findAll(): Promise<Account[]> {
-    return await this.accountModel.find().exec();
+    const result = await this.accountModel.find().exec();
+    this.logger.verbose(`Accounts found:\n ${result}`);
+    return result;
   }
 
   async findAccount(clientId: string, accountId: string) {
@@ -105,7 +107,7 @@ export class AccountService implements OnModuleInit {
       throw new ForbiddenException(
         "The account cannot be accessed by the current client"
       );
-
+    this.logger.verbose(`Account found:\n ${account}`);
     return account;
   }
 
@@ -118,7 +120,7 @@ export class AccountService implements OnModuleInit {
     const account = await this.findAccount(clientId, accountId);
 
     const accountWithMovements = await account.populate("movements");
-
+    this.logger.verbose(`Movements found:\n ${accountWithMovements.movements}`);
     return accountWithMovements.movements;
   }
 
@@ -133,7 +135,7 @@ export class AccountService implements OnModuleInit {
 
     account.movements.push(movement);
     account.balance += createAccountMovementDto.amount;
-
+    this.logger.verbose(`Movement successfully created:\n ${movement}`);
     return movement;
   }
 
@@ -157,7 +159,7 @@ export class AccountService implements OnModuleInit {
     });
 
     const result = groupBy(expensesMovements, ({ description }) => description);
-
+    this.logger.verbose(`Expenses found:\n ${result}`);
     return result;
   }
 }

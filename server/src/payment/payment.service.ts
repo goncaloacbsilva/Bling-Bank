@@ -99,14 +99,15 @@ export class PaymentService {
   }
 
   async createPayment(clientId: string, createPaymentDto: CreatePaymentDto) {
+    this.logger.verbose(`Attempting to create a payment...\n`);
     const account = await this.accountService.findAccount(
       clientId,
       createPaymentDto.accountId
     );
-
+    this.logger.verbose(`Checking if funds are sufficient...\n`);
     if (account.balance + createPaymentDto.amount < 0)
       throw new BadRequestException("Insufficient funds");
-
+    this.logger.verbose(`Checking if date is valid...\n`);
     if (
       DateTime.now().toMillis() -
         DateTime.fromISO(createPaymentDto.date).toMillis() <
@@ -125,7 +126,7 @@ export class PaymentService {
     account.paymentOrders.push(payment);
 
     await Promise.all([account.save(), payment.save()]);
-
+    this.logger.verbose(`Payment successfully created:\n ${payment}`);
     return payment;
   }
 
@@ -146,15 +147,23 @@ export class PaymentService {
     clientId: string,
     authorizePaymentDto: AuthorizePaymentDto
   ) {
+    this.logger.verbose("Received:", authorizePaymentDto);
+
+    this.logger.verbose("Checking payment...");
+
     const payment = await this.findPayment(
       clientId,
       authorizePaymentDto.paymentId
     );
 
+    this.logger.verbose(`Payment: ${payment._id}`);
+
     if (payment.completed)
       throw new BadRequestException("This payment was already processed");
 
     const session = await this.sessionModel.findById(sessionId).exec();
+
+    this.logger.verbose("Creating exclusive device signature object...");
 
     const holderSignature: HolderSignature = {
       clientId: clientId,
@@ -162,11 +171,15 @@ export class PaymentService {
       signature: authorizePaymentDto.signature,
     };
 
+    this.logger.verbose("Checking signature...");
     if (
       !this.checkHolderSignature(holderSignature, authorizePaymentDto.paymentId)
     )
       throw new BadRequestException("Signatures don't match");
 
+    this.logger.verbose(
+      `Added signature: (Payment: ${payment._id}) <== (Client: ${clientId})`
+    );
     payment.holdersSignatures.push(holderSignature);
     await payment.save();
 
@@ -184,13 +197,13 @@ export class PaymentService {
         _id: Types.ObjectId;
       }
   ) {
+    this.logger.verbose(`Processing payment...\n`);
+
+    this.logger.verbose(`Checking if funds are sufficient...\n`);
     if (payment.account.balance + payment.amount < 0)
       throw new BadRequestException("Insufficient funds");
 
-    console.log(payment.account);
-
     const account = await this.accountModel.findById(payment.account[0]._id);
-
     const createMovementDto = new CreateAccountMovementDto();
     createMovementDto.date = payment.date;
     createMovementDto.amount = payment.amount;
@@ -200,9 +213,9 @@ export class PaymentService {
       account,
       createMovementDto
     );
-
+    this.logger.verbose("Movement created:", movement);
     payment.completed = true;
-
+    this.logger.verbose("Payment updated:", payment);
     await Promise.all([movement.save(), account.save(), payment.save()]);
   }
 }

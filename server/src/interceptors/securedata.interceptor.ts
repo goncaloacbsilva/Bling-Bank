@@ -6,6 +6,7 @@ import {
   BadRequestException,
   NotFoundException,
   Inject,
+  Logger,
 } from "@nestjs/common";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
@@ -19,7 +20,6 @@ import { Session } from "src/client/schemas/client.schema";
 import { createSecretKey } from "crypto";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
-import { Duration } from "luxon";
 import { checkNonce } from "src/utils/replayProtect";
 
 @Injectable()
@@ -29,14 +29,16 @@ export class SecureDataInterceptor implements NestInterceptor {
     @InjectModel(Session.name) private readonly sessionModel: Model<Session>
   ) {}
 
+  private readonly logger = new Logger(SecureDataInterceptor.name);
+
   async intercept(
     context: ExecutionContext,
     handler: CallHandler
   ): Promise<Observable<any>> {
     const req = context.switchToHttp().getRequest();
-
+    this.logger.verbose("Received secure data request");
     // Initial headers check
-
+    this.logger.verbose(`Checking security headers...\n`);
     if (
       !req.headers["mic"] ||
       !req.headers["nonce"] ||
@@ -53,10 +55,12 @@ export class SecureDataInterceptor implements NestInterceptor {
     if (!isBase64(req.headers["nonce"]))
       throw new BadRequestException("Invalid nonce");
 
+    this.logger.verbose(`Verifing nonce: ${req.headers["nonce"]}`);
     // Replay attack check
     await checkNonce(this.nonceCache, req.headers["nonce"]);
 
     // Analyze the risk of not verify the integrity of the "session-id -> report
+    this.logger.verbose(`Checking session...\n`);
     const session = await this.sessionModel
       .findById(req.headers["session-id"])
       .exec();
@@ -64,6 +68,8 @@ export class SecureDataInterceptor implements NestInterceptor {
     if (!session) {
       throw new NotFoundException("Invalid session");
     }
+
+    this.logger.verbose(`Found session: ${session._id}`);
 
     const sessionKey = createSecretKey(
       Buffer.from(session.sessionKey, "base64")
@@ -86,7 +92,7 @@ export class SecureDataInterceptor implements NestInterceptor {
       };
 
       // Decrypt request
-      
+      this.logger.verbose("Decrypting data with session key...");
       try {
         req.body = unprotect(protectedPacket, sessionKey);
       } catch (e) {
@@ -104,10 +110,15 @@ export class SecureDataInterceptor implements NestInterceptor {
       )
         throw new BadRequestException("Integrity protection fault");
     }
-
     return handler.handle().pipe(
       map((data) => {
+        this.logger.verbose("Response data:", data);
+
+        this.logger.verbose("Encrypting data with session key...");
+
         const encodedPacket = protect(data, sessionKey);
+
+        this.logger.verbose(encodedPacket);
 
         return encodedPacket;
       })

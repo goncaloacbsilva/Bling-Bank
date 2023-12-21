@@ -91,10 +91,14 @@ export class ClientService {
   async login(encodedLoginDto: ProtectedData & { publicKey: string }) {
     let loginData = undefined;
 
+    this.logger.verbose("Received login payload:", encodedLoginDto);
+
     // Replay attack check
+    this.logger.verbose(`Verifing nonce: ${encodedLoginDto.nonce}`);
     await checkNonce(this.nonceCache, encodedLoginDto.nonce);
 
     try {
+      this.logger.verbose("Decoding payload data...");
       loginData = decryptAsymmetricData(encodedLoginDto, this.privateKey);
     } catch (err: any) {
       throw new BadRequestException("Data decryption fault");
@@ -106,9 +110,16 @@ export class ClientService {
       publicKey: encodedLoginDto.publicKey,
     };
 
+    this.logger.verbose("Decoded payload:", micPayload);
+
+    this.logger.verbose(
+      `Checking payload integrity (MIC:${encodedLoginDto.mic})`
+    );
+
     if (!micMatch(encodedLoginDto.mic, micPayload))
       throw new BadRequestException("Data integrity fault");
 
+    this.logger.verbose(`Performing DTO validations...`);
     let loginDto = plainToInstance(LoginDto, loginData);
     const errors = validateSync(loginDto);
 
@@ -120,13 +131,16 @@ export class ClientService {
 
     // Check credentials
 
+    this.logger.verbose(`Checking credentials...`);
     const client = await this.clientModel.findById(loginDto.clientId);
 
     if (!client) throw new NotFoundException("Client not found");
 
+    this.logger.verbose(`Found client: ${client.name} / ID: ${client._id}`);
     if (client.password !== secureHash(loginDto.password))
       throw new UnauthorizedException("Invalid credentials");
 
+    this.logger.verbose(`Initializing session...`);
     // Initialize session
 
     const sessionKey = generateSymmetricKey();
@@ -145,6 +159,10 @@ export class ClientService {
       sessionKey: sessionKey.export().toString("base64"),
     };
 
+    this.logger.verbose("Response data:", responseData);
+
+    this.logger.verbose("Encrypting data with client public key");
+
     const protectedData = protectAsymmetricServer(
       responseData,
       createPublicKey({
@@ -153,6 +171,11 @@ export class ClientService {
         type: "spki",
       })
     );
+
+    this.logger.verbose("Response payload:", {
+      mic: protectedData.mic,
+      data: protectedData.data,
+    });
 
     return {
       mic: protectedData.mic,

@@ -102,7 +102,7 @@ This machine runs the inner router
 
     ```sh
     $ chmod +x setup.sh
-    $ ./setup.sh ("select the option inner router")
+    $ ./setup.sh
     ```
 
 3. Select option `5) Inner Router`
@@ -128,13 +128,13 @@ This machine runs the server that runs in nodejs
 
     ```sh
     $ chmod +x setup.sh
-    $ ./setup.sh ("select the option server")
+    $ ./setup.sh
     ```
-3. Select option `5) Inner Router`
+3. Select option `3) server`
 
 > Note: Sometimes the setup crashes because the network is still being set so the solution is to run the set up again.
 
-#### Machine 4 (DataBase)
+#### Machine 4 (Database)
 
 This machine runs the database which runs in mongo
 
@@ -150,7 +150,7 @@ This machine runs the database which runs in mongo
 
     ```sh
     $ chmod +x setup.sh
-    $ ./setup.sh ("select the option database")
+    $ ./setup.sh
     ```
 
 2. Select option `2) Database`
@@ -188,14 +188,64 @@ Sometimes the setup crashes because the network is still being set so the soluti
 
 ## Demonstration
 
-Now that all the networks and machines are up and running, ...
+For testing purposes we have an endpoint in our server to retrieve all of the clients info, this way we can see the client ids that we need to perform the login.<br>
+The command used for this is `curl http://192.168.1.1/client/all | jq .` and it returns an output with the format
+```json
+[
+  {
+    "_id": "",
+    "name": "",
+    "password": "",
+    "accounts": [
+      ...
+    ],
+  },
+  ...
+]
+```
 
-*(give a tour of the best features of the application; add screenshots when relevant)*
+### Features:
+#### Authentication:
+Our project features a secure authentication system that allows clients to login from any device using their crendentials and establish a secure session. The secure session is established with an initial change of asymmetric keys between the cli and the server.
 
+*Login Prompt*
+![LoginDialog](img/login.png)
+*Server logs*
+![LoginServer](img/loginServer.png)
 
-*(IMPORTANT: show evidence of the security mechanisms in action; show message payloads, print relevant messages, perform simulated attacks to show the defenses in action, etc.)*
+#### Management of multiple accounts:
+Our highly flexible data models allow clients to manage multiple accounts. These account can also be shared among multiple holders.
+![Accounts](img/accounts.png)
 
-This concludes the demonstration.
+#### Secure payments involving shared accounts:
+The payments system was designed to provide secure payment approvals by using client individual device signatures. This way account holders can approve payments from any device and their digital signatures can be later verified by the server.
+*Authorize Payment Prompt*
+![AuthorizePayment](img/authorizePayment.png)
+*Server logs*
+![AuthorizePaymentServer](img/authorizePaymentServer.png)
+
+To demonstrate our security mechanisms we performed a Man-in-the-Middle (MitM) and for that purpose we used mitmproxy that is an open-source, interactive, and customizable proxy server designed for inspecting, modifying, and intercepting HTTP and HTTPS traffic. We configured a proxy in the client with the url localhost and the port 8080 so that we could redirect the http traffic to mitmproxy. We performed replay attacks with POST requests like create payment and also with GET requests like login and obtained the following results:
+
+*Attempt of a replay attack*
+![ReplayAttack](img/replay.png)
+
+Then we intercepted the traffic from the client using mitmproxy with interception filter `~u 192.168.1.1` and attempted to tamper some fields in the packets like the nonces and the data. By doing this we obtained the following responses from the server:
+
+*Attempt of a MITM packet interception attack (during POST request)*
+![InterceptionAttack](img/intercept.png)
+
+*Attempt of a MITM packet interception attack (during GET request)*
+![InterceptionAttack2](img/intercept2.png)
+
+It is also important to note that during all this attacks the data traded between the client and the server was always kept confidential.
+
+![Confidential](img/confidential.png)
+
+For our last attack we decided to perform service recognition with a port scan attack to test the firewall of the border router. Which gave us the output below:
+
+![PortScan](img/portscan.png)
+
+This means that the firewall is properly configured by only accepting traffic at the TCP port 80 and blocking other incomming connections.
 
 ## Additional Information
 
@@ -221,13 +271,8 @@ This concludes the demonstration.
 #### Iptables:
  - [Nat configuration](https://www.digitalocean.com/community/tutorials/how-to-forward-ports-through-a-linux-gateway-with-iptables)
 
-### Versioning
-
-We use [SemVer](http://semver.org/) for versioning.  
-
 ### License
 
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) for details.
-
 ----
 END OF README

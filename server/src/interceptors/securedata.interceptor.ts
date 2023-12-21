@@ -86,7 +86,12 @@ export class SecureDataInterceptor implements NestInterceptor {
       };
 
       // Decrypt request
-      req.body = unprotect(protectedPacket, sessionKey);
+      
+      try {
+        req.body = unprotect(protectedPacket, sessionKey);
+      } catch (e) {
+        throw new BadRequestException("Data decryption fault");
+      }
     } else {
       if (
         !verifyMac(

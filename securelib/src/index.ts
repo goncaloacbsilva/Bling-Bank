@@ -70,7 +70,15 @@ export function decipherData(
     decipher.final(),
   ]).toString();
 
-  return JSON.parse(decrypted);
+  let dataObject;
+
+  try {
+    dataObject = JSON.parse(decrypted);
+  } catch (e) {
+    dataObject = {};
+  }
+
+  return dataObject;
 }
 
 export function encryptAsymmetricData(

@@ -38,7 +38,7 @@ function handleRequestError(err: any) {
   if (error.response) {
     const responseData: any = error.response.data;
 
-    console.error(responseData["message"] ?? "Unknown error");
+    console.error("Error:", responseData["message"] ?? "Unknown error");
   } else {
     console.error(err);
   }

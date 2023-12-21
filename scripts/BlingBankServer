@@ -1,0 +1,3 @@
+#!/bin/bash
+
+(cd ~/t49-goncalo-miguel-renato/server; yarn start:prod)

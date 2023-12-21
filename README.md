@@ -10,11 +10,7 @@
 | 96925  | Gonçalo Silva      | <https://github.com/goncaloacbsilva>     | <mailto:goncalo.c.brito.da.silva@tecnico.ulisboa.pt>     |
 | 99113  | Miguel Vale | <https://github.com/MiguelVale2121> | <mailto:miguel.vale@tecnico.ulisboa.pt> |
 
-*(fill table above with team member information)*  
-
 ![Renato](img/renato.jpg) ![Gonçalo](img/96925.png) ![Miguel](img/IMG_99113.jpg)
-
-*(add face photos with 150px height; faces should have similar size and framing)*
 
 ## Contents
 
@@ -25,106 +21,250 @@ It offers insights into the rationale behind these choices, the project's archit
 
 This document presents installation and demonstration instructions.
 
-*(adapt all of the following to your project, changing to the specific Linux distributions, programming languages, libraries, etc)*
-
 ## Installation
 
-To see the project in action, it is necessary to setup a virtual environment, with N networks and M machines.  
+To see the project in action, it is necessary to setup a virtual environment, with 3 networks and 5 machines.  
 
 The following diagram shows the networks and machines:
 
-*(include a text-based or an image-based diagram)*
+![NetworkDiagram](img/network.jpeg)
 
 ### Prerequisites
 
 All the virtual machines are based on: Linux 64-bit, Kali 2023.3  
 
-[Download](https://...link_to_download_installation_media) and [install](https://...link_to_installation_instructions) a virtual machine of Kali Linux 2023.3.  
-Clone the base machine to create the other machines.
+[Download](https://cdimage.kali.org/kali-2023.4/kali-linux-2023.4-installer-amd64.iso) and [install](https://www.kali.org/docs/installation/hard-disk-install/) a virtual machine of Kali Linux 2023.3.  
 
-*(above, replace witch actual links)*
+When using VirtualBox in Windows the Hyper-V has to be **disabled**
 
 ### Machine configurations
 
-For each machine, there is an initialization script with the machine name, with prefix `init-` and suffix `.sh`, that installs all the necessary packages and makes all required configurations in the a clean machine.
+For each machine, there is an initialization script with prefix `config` and suffix `.sh`, that installs all the necessary packages and makes all required configurations in the a clean machine.
 
-Inside each machine, use Git to obtain a copy of all the scripts and code.
+To simplify the setup process we also have a script called `setup.sh` that should be used to configurate all the machines. This script presents the user with several options one for each machine.
+
+Inside the machine from which we make the linked copies, use Git to obtain a copy of all the scripts and code. This way we only need to clone the repository once.
 
 ```sh
-$ git clone https://github.com/tecnico-sec/cxx...
+$ git clone https://github.com/tecnico-sec/t49-goncalo-miguel-renato.git
 ```
-
-*(above, replace with link to actual repository)*
 
 Next we have custom instructions for each machine.
 
-#### Machine 1
+#### Machine 1 (Border Router)
 
-This machine runs ...
+1. Network tab in VirtualBox:
 
-*(describe what kind of software runs on this machine, e.g. a database server (PostgreSQL 16.1))*
+    **Adapter 1:**
+    - Attached to: `Internal Network`
+    - Name: `dmz`
+    - Advanced Settings:
+      - Promiscuous Mode: `Allow VMs`
 
-To verify:
+    **Adapter 2:**
+    - Attached to: `Internal Network`
+    - Name: `outnet`
+    - Advanced Settings:
+      - Promiscuous Mode: `Allow VMs`
 
-```sh
-$ setup command
-```
+    **Adapter 3:**
+    - Attached to: `NAT`
 
-*(replace with actual commands)*
+2. Run machine setup:
 
-To test:
+    ```sh
+    $ chmod +x setup.sh
+    $ ./setup.sh
+    ```
+3. Select option `4) Border Router`
 
-```sh
-$ test command
-```
+#### Machine 2 (Inner Router)
 
-*(replace with actual commands)*
+This machine runs the inner router
 
-The expected results are ...
+1. Network tab in VirtualBox:
 
-*(explain what is supposed to happen if all goes well)*
+    **Adapter 1:**
+    - Attached to: `Internal Network`
+    - Name: `dmz`
+    - Advanced Settings:
+      - Promiscuous Mode: `Allow VMs`
 
-If you receive the following message ... then ...
+    **Adapter 2:**
+    - Attached to: Internal Network
+    - Name: `db`
+    - Advanced Settings:
+      - Promiscuous Mode: `Allow VMs`
 
-*(explain how to fix some known problem)*
+2. Run machine setup:
 
-#### Machine ...
+    ```sh
+    $ chmod +x setup.sh
+    $ ./setup.sh
+    ```
 
-*(similar content structure as Machine 1)*
+3. Select option `5) Inner Router`
+
+Sometimes the setup crashes because the network is still being set so the solution is to run the set up again.
+
+#### Machine 3 (Server)
+
+This machine runs the server that runs in nodejs
+
+1. Shared folders tab in VirtualBox:
+  - Add an empty shared folder called Keys and auto-mount it.
+
+2. Network tab in VirtualBox:
+
+    **Adapter 1:**
+    - Attached to: `Internal Network`
+    - Name: `dmz`
+    - Advanced Settings:
+      - Promiscuous Mode: `Allow VMs`
+
+    ```sh
+    $ chmod +x setup.sh
+    $ ./setup.sh
+    ```
+3. Select option `3) server`
+
+Sometimes the setup crashes because the network is still being set so the solution is to run the set up again.
+
+#### Machine 4 (Database)
+
+This machine runs the database which runs in mongo
+
+1. Network tab in VirtualBox:
+
+    **Adapter 1:**
+    - Attached to: `Internal Network`
+    - Name: `db`
+    - Advanced Settings:
+      - Promiscuous Mode: `Allow VMs`
+
+    ```sh
+    $ chmod +x setup.sh
+    $ ./setup.sh
+    ```
+
+2. Select option `2) Database`
+
+Sometimes the setup crashes because the network is still being set so the solution is to run the set up again.
+
+#### Machine 5 (Client)
+
+This machine runs the client in nodejs.
+
+1. Shared folders tab in VirtualBox:
+  - Add an empty shared folder called Keys and auto-mount it.
+
+2. Network tab in VirtualBox:
+
+    **Adapter 1:**
+    - Attached to: `Internal Network`
+    - Name: `outNet`
+    - Advanced Settings:
+      - Promiscuous Mode: `Allow VMs`
+
+    **Adapter 2:**
+    - Attached to: `NAT`
+
+    ```sh
+    $ chmod +x setup.sh
+    $ ./setup.sh ("select the option client")
+    ```
+
+3. Select option `1) Client`
+
+Sometimes the setup crashes because the network is still being set so the solution is to run the set up again.
 
 ## Demonstration
 
-Now that all the networks and machines are up and running, ...
-
-*(give a tour of the best features of the application; add screenshots when relevant)*
-
-```sh
-$ demo command
+For testing purposes we have an endpoint in our server to retrieve all of the clients info, this way we can see the client ids that we need to perform the login.<br>
+The command used for this is `curl http://192.168.1.1/client/all | jq .` and it returns an output with the format
+```
+[
+  {
+    "_id": "",
+    "name": "",
+    "password": "",
+    "accounts": [
+      ...
+    ],
+  },
+  ...
+]
 ```
 
-*(replace with actual commands)*
+### Features:
+#### Authentication:
+Our project features a secure authentication system that allows clients to login from any device using their crendentials and establish a secure session. The secure session is established with an initial change of asymmetric keys between the cli and the server.
 
-*(IMPORTANT: show evidence of the security mechanisms in action; show message payloads, print relevant messages, perform simulated attacks to show the defenses in action, etc.)*
+*Login Prompt*
+![LoginDialog](img/login.png)
+*Server logs*
+![LoginServer](img/loginServer.png)
 
-This concludes the demonstration.
+#### Management of multiple accounts:
+Our highly flexible data models allow clients to manage multiple accounts. These accounts can also be shared among multiple holders.
+![Accounts](img/accounts.png)
+
+#### Secure payments involving shared accounts:
+The payments system was designed to provide secure payment approvals by using client individual device signatures. This way account holders can approve payments from any device and their digital signatures can be later verified by the server.<br>
+*Authorize Payment Prompt*
+![AuthorizePayment](img/authorizePayment.png)
+*Server logs*
+![AuthorizePaymentServer](img/authorizePaymentServer.png)
+
+To demonstrate our security mechanisms we performed a Man-in-the-Middle (MitM) and for that purpose we used mitmproxy that is an open-source, interactive, and customizable proxy server designed for inspecting, modifying, and intercepting HTTP and HTTPS traffic. We configured a proxy in the client with the url localhost and the port 8080 so that we could redirect the http traffic to mitmproxy. We performed replay attacks with POST requests like create payment and also with GET requests like login and obtained the following results:
+
+*Attempt of a replay attack*
+![ReplayAttack](img/replay.png)
+
+Then we intercepted the traffic from the client using mitmproxy with interception filter `~u 192.168.1.1` and attempted to tamper some fields in the packets like the nonces and the data. By doing this we obtained the following responses from the server:
+
+*Attempt of a MITM packet interception attack (during POST request)*
+![InterceptionAttack](img/intercept.png)
+
+*Attempt of a MITM packet interception attack (during GET request)*
+![InterceptionAttack2](img/intercept2.png)
+
+It is also important to note that during all this attacks the data traded between the client and the server was always kept confidential.
+
+![Confidential](img/confidential.png)
+
+For our last attack we decided to perform service recognition with a port scan attack to test the firewall of the border router. Which gave us the output below:
+
+![PortScan](img/portscan.png)
+
+This means that the firewall is properly configured by only accepting traffic at the TCP port 80 and blocking other incomming connections.
 
 ## Additional Information
 
 ### Links to Used Tools and Libraries
 
-- [Java 11.0.16.1](https://openjdk.java.net/)
-- [Maven 3.9.5](https://maven.apache.org/)
-- ...
+#### Base stack:
+- [NodeJS](https://nodejs.org/)
+- [TypeScript](https://typescriptlang.org)
 
-### Versioning
+#### Server:
+- [Cache Manager](https://www.npmjs.com/package/cache-manager)
+- [Class Validator](https://www.npmjs.com/package/class-validator)
+- [Class Transformer](https://www.npmjs.com/package/class-transformer)
+- [Luxon](https://moment.github.io/luxon/)
+- [MongoDB](https://www.mongodb.com/)
+- [Mongoose](https://mongoosejs.com/)
+- [NestJS](https://nestjs.com/)
 
-We use [SemVer](http://semver.org/) for versioning.  
+#### Client:
+ - [Prompt](https://www.npmjs.com/package/prompts)
+ - [Axios](https://www.npmjs.com/package/axios)
+
+#### Iptables:
+ - [Nat configuration](https://www.digitalocean.com/community/tutorials/how-to-forward-ports-through-a-linux-gateway-with-iptables)
 
 ### License
 
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) for details.
-
-*(switch to another license, or no license, as you see fit)*
-
 ----
 END OF README

@@ -82,8 +82,6 @@ Next we have custom instructions for each machine.
 
 This machine runs the inner router
 
-### To Setup:
-
 1. Network tab in VirtualBox:
 
     **Adapter 1:**
@@ -113,8 +111,6 @@ Sometimes the setup crashes because the network is still being set so the soluti
 
 This machine runs the server that runs in nodejs
 
-### To Setup:
-
 1. Shared folders tab in VirtualBox:
   - Add an empty shared folder called Keys and auto-mount it.
 
@@ -132,13 +128,11 @@ This machine runs the server that runs in nodejs
     ```
 3. Select option `3) server`
 
-> Note: Sometimes the setup crashes because the network is still being set so the solution is to run the set up again.
+Sometimes the setup crashes because the network is still being set so the solution is to run the set up again.
 
 #### Machine 4 (Database)
 
 This machine runs the database which runs in mongo
-
-### To Setup:
 
 1. Network tab in VirtualBox:
 
@@ -160,8 +154,6 @@ Sometimes the setup crashes because the network is still being set so the soluti
 #### Machine 5 (Client)
 
 This machine runs the client in nodejs.
-
-### To Setup:
 
 1. Shared folders tab in VirtualBox:
   - Add an empty shared folder called Keys and auto-mount it.
@@ -190,7 +182,7 @@ Sometimes the setup crashes because the network is still being set so the soluti
 
 For testing purposes we have an endpoint in our server to retrieve all of the clients info, this way we can see the client ids that we need to perform the login.<br>
 The command used for this is `curl http://192.168.1.1/client/all | jq .` and it returns an output with the format
-```json
+```
 [
   {
     "_id": "",
@@ -214,11 +206,11 @@ Our project features a secure authentication system that allows clients to login
 ![LoginServer](img/loginServer.png)
 
 #### Management of multiple accounts:
-Our highly flexible data models allow clients to manage multiple accounts. These account can also be shared among multiple holders.
+Our highly flexible data models allow clients to manage multiple accounts. These accounts can also be shared among multiple holders.
 ![Accounts](img/accounts.png)
 
 #### Secure payments involving shared accounts:
-The payments system was designed to provide secure payment approvals by using client individual device signatures. This way account holders can approve payments from any device and their digital signatures can be later verified by the server.
+The payments system was designed to provide secure payment approvals by using client individual device signatures. This way account holders can approve payments from any device and their digital signatures can be later verified by the server.<br>
 *Authorize Payment Prompt*
 ![AuthorizePayment](img/authorizePayment.png)
 *Server logs*

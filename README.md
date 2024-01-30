@@ -1,4 +1,4 @@
-# T49 BlingBank Project Read Me
+# Bling Bank
 
 <!-- this is an instruction line; after you follow the instruction, delete the corresponding line. Do the same for all instruction lines! -->
 
